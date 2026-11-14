@@ -1,0 +1,69 @@
+name: Linux build
+
+# Сборка игры под Linux. Готовая игра — в артефакте «otryv-linux»
+# на странице запуска (Actions → Linux build → нужный запуск → Artifacts).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+  GODOT_RELEASE: stable
+
+jobs:
+  export-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and export templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_RELEASE }}-linux-templates
+
+      - name: Download Godot and export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_RELEASE}"
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-${GODOT_RELEASE}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-${GODOT_RELEASE}_export_templates.tpz"
+          tpl_dir=~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_RELEASE}
+          mkdir -p "$tpl_dir"
+          # Нужны только шаблоны Linux x86_64 — остальные не распаковываем.
+          unzip -q -j /tmp/templates.tpz 'templates/version.txt' 'templates/linux_*x86_64*' -d "$tpl_dir"
+          ls -la "$tpl_dir"
+
+      - name: Import project
+        run: |
+          godot=~/godot/Godot_v${GODOT_VERSION}-${GODOT_RELEASE}_linux.x86_64
+          "$godot" --headless --path . --import
+
+      - name: Export Linux build
+        run: |
+          set -euo pipefail
+          godot=~/godot/Godot_v${GODOT_VERSION}-${GODOT_RELEASE}_linux.x86_64
+          mkdir -p build/linux
+          "$godot" --headless --path . --export-release "Linux" build/linux/otryv.x86_64 2>&1 | tee export.log
+          test -f build/linux/otryv.x86_64
+          test -f build/linux/otryv.pck
+          chmod +x build/linux/otryv.x86_64
+          ls -la build/linux
+          # tar сохраняет флаг исполняемого файла (zip-артефакт GitHub его теряет).
+          tar -czf build/otryv-linux-x86_64.tar.gz -C build/linux .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: otryv-linux
+          path: build/otryv-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 30
