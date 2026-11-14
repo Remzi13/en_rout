@@ -32,7 +32,6 @@ var timer: float = 0.0 ## до следующей погони / до конца
 var rng := RandomNumberGenerator.new()
 
 var _leaving: Array[ArcadeCar] = []
-var _music: AudioStreamPlayer
 
 
 func setup(w: OpenWorld, seed_value: int) -> void:
@@ -41,11 +40,6 @@ func setup(w: OpenWorld, seed_value: int) -> void:
 	rules = ChaseRules.new(config)
 	score = ChaseScore.new(config)
 	timer = rng.randf_range(config.min_interval_s, config.max_interval_s)
-	_music = AudioStreamPlayer.new()
-	_music.bus = &"Music"
-	_music.stream = Synth.chase_music()
-	_music.volume_db = -8.0
-	add_child(_music)
 	w.traffic.near_miss.connect(_on_near_miss)
 
 
@@ -111,7 +105,6 @@ func _begin_warning() -> void:
 	rules.reset()
 	score = ChaseScore.new(config)
 	timer = config.warning_s
-	Synth.play(self, Synth.alert(), -4.0)
 	_set_state(State.WARNING)
 
 
@@ -135,7 +128,6 @@ func _spawn_pursuer(spot: Dictionary, skill: float, index: int) -> void:
 
 
 func _start_chase() -> void:
-	_music.play()
 	_set_state(State.ACTIVE)
 
 
@@ -164,8 +156,6 @@ func _finish(outcome: int) -> void:
 		"seed": GameState.world_seed,
 		"date": Time.get_datetime_string_from_system(false, true),
 	})
-	_music.stop()
-	Synth.play(self, Synth.success() if outcome == ChaseRules.Outcome.ESCAPED else Synth.fail(), -2.0)
 	# Преследователи уезжают: отключаем погоню и уводим их прочь.
 	for car in pursuers:
 		if is_instance_valid(car):
@@ -217,7 +207,6 @@ func _on_near_miss(_car: ArcadeCar) -> void:
 	if state == State.ACTIVE:
 		score.add_near_miss()
 		near_miss_scored.emit()
-		Synth.play(self, Synth.whoosh(), -6.0)
 
 
 func _set_state(s: State) -> void:

@@ -269,7 +269,6 @@ func find_ground_spawn(center: Vector3, min_d: float, max_d: float, rng: RandomN
 
 func _on_player_impact(strength: float) -> void:
 	camera.add_shake(clampf(strength / 15.0, 0.1, 0.8))
-	Synth.play(self, Synth.impact(), linear_to_db(clampf(strength / 15.0, 0.2, 1.0)), randf_range(0.85, 1.15))
 
 
 func _exit_tree() -> void:

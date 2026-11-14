@@ -23,13 +23,8 @@ func _ready() -> void:
 	scroll.add_child(v)
 	v.add_child(UiTheme.label("Настройки", 36, UiTheme.ACCENT))
 
-	v.add_child(UiTheme.label("Звук", 24))
-	_first = _slider(v, "Общая громкость", GameState.master_volume, func(x: float) -> void: GameState.master_volume = x)
-	_slider(v, "Музыка", GameState.music_volume, func(x: float) -> void: GameState.music_volume = x)
-	_slider(v, "Эффекты", GameState.sfx_volume, func(x: float) -> void: GameState.sfx_volume = x)
-
 	v.add_child(UiTheme.label("Графика", 24))
-	_option(v, "Качество", ["Низкое", "Среднее", "Высокое"], GameState.quality,
+	_first = _option(v, "Качество", ["Низкое", "Среднее", "Высокое"], GameState.quality,
 		func(i: int) -> void: GameState.quality = i)
 	_option(v, "Дальность прорисовки", ["Близко", "Средне", "Далеко", "Очень далеко"], GameState.draw_distance - 1,
 		func(i: int) -> void: GameState.draw_distance = i + 1)
@@ -81,7 +76,7 @@ func _slider(parent: Control, text: String, value: float, setter: Callable) -> H
 	return s
 
 
-func _option(parent: Control, text: String, items: Array, selected: int, setter: Callable) -> void:
+func _option(parent: Control, text: String, items: Array, selected: int, setter: Callable) -> OptionButton:
 	var row := HBoxContainer.new()
 	var l := UiTheme.label(text, 20)
 	l.custom_minimum_size.x = 280
@@ -97,6 +92,7 @@ func _option(parent: Control, text: String, items: Array, selected: int, setter:
 		GameState.save_settings())
 	row.add_child(o)
 	parent.add_child(row)
+	return o
 
 
 func _refresh_keys() -> void:

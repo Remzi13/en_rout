@@ -39,7 +39,6 @@ class CarControls:
 @export var style: CarModel.Style = CarModel.Style.SPORT
 @export var body_color: Color = Color(0.95, 0.4, 0.08)
 @export var with_headlights: bool = true
-@export var with_audio: bool = true
 
 var driver: RefCounted = null ## любой объект с update_input(car, controls, delta)
 var controls := CarControls.new()
@@ -64,7 +63,6 @@ var _water_time: float = 0.0
 var _impact_cooldown: float = 0.0
 var _lights: Array[SpotLight3D] = []
 var _lights_on: bool = false
-var _audio: CarAudio
 
 
 func _ready() -> void:
@@ -119,9 +117,6 @@ func _ready() -> void:
 			l.visible = false
 			add_child(l)
 			_lights.append(l)
-	if with_audio:
-		_audio = CarAudio.new()
-		add_child(_audio)
 
 
 func _physics_process(delta: float) -> void:
@@ -148,8 +143,6 @@ func _physics_process(delta: float) -> void:
 	model.update_wheels(steer_angle_deg, drop, v * delta / CarModel.WHEEL_RADIUS)
 	model.set_brake(controls.brake > 0.1 and v > 1.0)
 	_update_lights()
-	if _audio != null:
-		_audio.update_sound(self)
 
 
 func get_forward_speed() -> float:
