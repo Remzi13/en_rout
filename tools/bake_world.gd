@@ -63,8 +63,6 @@ func _bake_assets() -> void:
 	_assets["dirt_road"] = _save(mb.dirt_road, "dirt_road.res")
 	_assets["water"] = _save(mb.water, "water.tres")
 	_assets["water_plane"] = _save(mb.water_mesh, "water_plane.tres")
-	_assets["conifer"] = _save(mb.conifer_mesh, "conifer.tres")
-	_assets["leafy"] = _save(mb.leafy_mesh, "leafy.tres")
 	_assets["rock"] = _save(mb.rock_mesh, "rock.tres")
 	_assets["bush"] = _save(mb.bush_mesh, "bush.tres")
 
@@ -271,8 +269,11 @@ func _bake_chunk(gen: WorldGen, cc: Vector2i, pieces: Array) -> void:
 	veg_root.name = "Vegetation"
 	root.add_child(veg_root)
 	var veg: Dictionary = data["vegetation"]
-	_add_layer(veg_root, cc, "Conifers", _assets["conifer"], veg["conifer"], 520.0, true, 0.35, 6.0, 0.0)
-	_add_layer(veg_root, cc, "Trees", _assets["leafy"], veg["leafy"], 520.0, true, 0.35, 6.0, 0.0)
+	# Деревья: MultiMesh без меша — только расстановка, меши даёт набор деревьев слоя.
+	_add_layer(veg_root, cc, "Conifers", null, veg["conifer"], 520.0, true, 0.35, 6.0, 0.0,
+		VegetationLayer.TreePreset.CONIFER_FOREST)
+	_add_layer(veg_root, cc, "Trees", null, veg["leafy"], 520.0, true, 0.35, 6.0, 0.0,
+		VegetationLayer.TreePreset.LEAFY_FOREST)
 	_add_layer(veg_root, cc, "Rocks", _assets["rock"], veg["rocks"], 380.0, true, 0.8, 0.9, 1.0)
 	_add_layer(veg_root, cc, "Bushes", _assets["bush"], veg["bushes"], 220.0, false, 0.0, 0.0, 0.0)
 
@@ -289,7 +290,8 @@ func _bake_chunk(gen: WorldGen, cc: Vector2i, pieces: Array) -> void:
 
 
 func _add_layer(parent: Node, cc: Vector2i, layer_name: String, mesh: Mesh, xforms: Array, range_end: float,
-		shadows: bool, radius: float, height: float, min_scale: float) -> void:
+		shadows: bool, radius: float, height: float, min_scale: float,
+		preset: VegetationLayer.TreePreset = VegetationLayer.TreePreset.NONE) -> void:
 	if xforms.is_empty():
 		return
 	var mm := MultiMesh.new()
@@ -312,6 +314,7 @@ func _add_layer(parent: Node, cc: Vector2i, layer_name: String, mesh: Mesh, xfor
 	layer.collider_radius = radius
 	layer.collider_height = height
 	layer.collider_min_scale = min_scale
+	layer.tree_preset = preset
 	parent.add_child(layer)
 
 

@@ -9,8 +9,6 @@ var asphalt_plain: StandardMaterial3D
 var dirt_road: StandardMaterial3D
 var water: StandardMaterial3D
 
-var conifer_mesh: ArrayMesh
-var leafy_mesh: ArrayMesh
 var rock_mesh: Mesh
 var bush_mesh: Mesh
 var water_mesh: PlaneMesh
@@ -126,48 +124,8 @@ func _mat(color: Color, roughness: float = 0.9, instance_tint: bool = false) -> 
 	return m
 
 
+## Камни и кусты. Деревья строятся процедурно (game/world/trees/), мешей-файлов у них нет.
 func _build_vegetation_meshes() -> void:
-	var bark := _mat(Color(0.30, 0.22, 0.15))
-	var needles := _mat(Color(0.16, 0.30, 0.16), 0.85, true)
-	var leaves := _mat(Color(0.28, 0.45, 0.18), 0.8, true)
-
-	var trunk := CylinderMesh.new()
-	trunk.top_radius = 0.18
-	trunk.bottom_radius = 0.3
-	trunk.height = 2.4
-	trunk.radial_segments = 7
-	trunk.rings = 1
-
-	# Ёлка: ствол + три конуса.
-	conifer_mesh = ArrayMesh.new()
-	_append(conifer_mesh, [[trunk, Transform3D(Basis(), Vector3(0, 1.2, 0))]], bark)
-	var cones := []
-	for k in 3:
-		var cone := CylinderMesh.new()
-		cone.top_radius = 0.0
-		cone.bottom_radius = 2.2 - k * 0.55
-		cone.height = 3.2 - k * 0.4
-		cone.radial_segments = 9
-		cone.rings = 1
-		cones.append([cone, Transform3D(Basis(), Vector3(0, 3.0 + k * 1.8, 0))])
-	_append(conifer_mesh, cones, needles)
-
-	# Лиственное: ствол + несколько сфер кроны.
-	leafy_mesh = ArrayMesh.new()
-	var tall_trunk := trunk.duplicate() as CylinderMesh
-	tall_trunk.height = 3.4
-	_append(leafy_mesh, [[tall_trunk, Transform3D(Basis(), Vector3(0, 1.7, 0))]], bark)
-	var crowns := []
-	var offsets := [Vector3(0, 4.6, 0), Vector3(1.0, 4.0, 0.3), Vector3(-0.8, 4.2, -0.6), Vector3(0.2, 5.4, 0.5)]
-	for k in offsets.size():
-		var s := SphereMesh.new()
-		s.radius = 1.7 - k * 0.2
-		s.height = s.radius * 1.8
-		s.radial_segments = 10
-		s.rings = 6
-		crowns.append([s, Transform3D(Basis(), offsets[k])])
-	_append(leafy_mesh, crowns, leaves)
-
 	var rock := SphereMesh.new()
 	rock.radius = 1.0
 	rock.height = 1.6
@@ -183,16 +141,3 @@ func _build_vegetation_meshes() -> void:
 	bush.rings = 4
 	bush.material = _mat(Color(0.25, 0.40, 0.16), 0.9, true)
 	bush_mesh = bush
-
-
-## Склеивает примитивы с трансформами в одну поверхность меша.
-func _append(target: ArrayMesh, parts: Array, material: Material) -> void:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for part in parts:
-		var prim: PrimitiveMesh = part[0]
-		var arr_mesh := ArrayMesh.new()
-		arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, prim.get_mesh_arrays())
-		st.append_from(arr_mesh, 0, part[1])
-	st.commit(target)
-	target.surface_set_material(target.get_surface_count() - 1, material)
