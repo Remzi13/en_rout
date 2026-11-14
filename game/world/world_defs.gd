@@ -3,9 +3,6 @@ extends RefCounted
 ## Общие константы мира из чанков-сцен: размеры, типы дорог и поверхностей.
 
 const CHUNK_SIZE := 256.0
-const CHUNKS_X := 5
-const CHUNKS_Z := 5
-const CHUNK_MIN := Vector2i(-2, -2) ## координата левого нижнего чанка
 const WATER_LEVEL := -4.0
 const LAYER_WORLD := 1
 const ROAD_LIFT_M := 0.06 ## полотно над осью кривой дороги
@@ -26,6 +23,14 @@ static func chunk_scene_path(c: Vector2i) -> String:
 	return "res://game/world/chunks/chunk_%d_%d.tscn" % [c.x, c.y]
 
 
-## Прямоугольник мира в плоскости XZ.
-static func world_rect() -> Rect2:
-	return Rect2(CHUNK_MIN.x * CHUNK_SIZE, CHUNK_MIN.y * CHUNK_SIZE, CHUNKS_X * CHUNK_SIZE, CHUNKS_Z * CHUNK_SIZE)
+## Прямоугольник в плоскости XZ, покрывающий все чанки списка. Размер мира
+## задаёт карта (art/map/map.blend), список чанков — WorldIndex.
+static func rect_of_chunks(coords: Array[Vector2i]) -> Rect2:
+	if coords.is_empty():
+		return Rect2()
+	var lo := coords[0]
+	var hi := coords[0]
+	for c in coords:
+		lo = Vector2i(mini(lo.x, c.x), mini(lo.y, c.y))
+		hi = Vector2i(maxi(hi.x, c.x), maxi(hi.y, c.y))
+	return Rect2(Vector2(lo) * CHUNK_SIZE, Vector2(hi - lo + Vector2i.ONE) * CHUNK_SIZE)

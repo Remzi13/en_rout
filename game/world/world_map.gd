@@ -1,13 +1,12 @@
 @tool
 class_name WorldMap
 extends Node3D
-## Корень game/world/world.tscn: экземпляры сцен-чанков 5×5, точка старта
-## игрока (PlayerStart) и невидимые стены по краю мира (Bounds).
-## Чтобы поправить чанк, откройте его сцену или включите «Editable Children».
-
-
-func contains(pos: Vector3) -> bool:
-	return WorldDefs.world_rect().has_point(Vector2(pos.x, pos.z))
+## Корень game/world/world.tscn: все сцены-чанки, точка старта игрока
+## (PlayerStart) и невидимые стены по краю мира (Bounds). Сцена для обзора
+## в редакторе и для запекания индекса: игра её не грузит (чанки подгружает
+## ChunkStreamer, старт и дороги — из WorldIndex).
+## Сцена и чанки пересоздаются tools/export_map.sh из art/map/map.blend:
+## править карту нужно в Blender, правки здесь пропадут.
 
 
 func chunks() -> Array[WorldChunk]:
@@ -21,3 +20,4 @@ func chunks() -> Array[WorldChunk]:
 func start_transform() -> Transform3D:
 	var m := get_node_or_null("PlayerStart") as Node3D
 	return m.global_transform if m != null else Transform3D(Basis(), Vector3(0, 5, 0))
+

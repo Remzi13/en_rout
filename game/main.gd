@@ -192,6 +192,8 @@ func _start_game(seed_value: int) -> void:
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
 	world.pause_requested.connect(_pause)
 	add_child(world)
+	if world.loading:
+		await world.ready_to_play
 	_clear_screen()
 	get_tree().paused = false
 	# Отладка: --autopilot — машина игрока едет по дорогам сама, --chase — сразу погоня.

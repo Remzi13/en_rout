@@ -3,3 +3,6 @@
 tests/.logs/
 *.import~
 build/
+# Промежуточные данные экспорта карты из Blender (пересоздаются tools/export_map.sh)
+art/map/export/
+*.blend1

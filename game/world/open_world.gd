@@ -1,19 +1,22 @@
 class_name OpenWorld
 extends Node3D
 ## Игровая сессия в открытом мире: окружение и свет, мир из сцен-чанков
-## (game/world/world.tscn), машина игрока, камера, трафик, погони, сутки и
-## погода, HUD. Создаётся из main.gd через OpenWorld.create(seed);
-## сид влияет на трафик, погони и погоду, сам мир — фиксированный.
+## (подгружаются вокруг игрока, см. ChunkStreamer), машина игрока, камера,
+## трафик, погони, сутки и погода, HUD. Создаётся из main.gd через
+## OpenWorld.create(seed); готовность — сигнал ready_to_play (стартовые чанки
+## грузятся несколько кадров). Сид влияет на трафик, погони и погоду, сам
+## мир — фиксированный.
 
 signal ready_to_play
 signal pause_requested
 
 const PLAYER_STATS := preload("res://game/cars/stats/player.tres")
-const WORLD_SCENE := "res://game/world/world.tscn"
+## Чанки ближе этого к старту грузятся до начала игры, остальные — потом в фоне.
+const INITIAL_LOAD_RADIUS_M := 320.0
 
 var world_seed: int = 0
 var materials: WorldMaterials
-var map: WorldMap
+var map: ChunkStreamer
 var roads: RoadNetwork
 var player: ArcadeCar
 var camera: FollowCamera
@@ -47,10 +50,12 @@ func _ready() -> void:
 
 	# Без видеокарты главный расход — треугольники деревьев: рисуем их ближе.
 	VegetationLayer.distance_scale = 0.5 if is_software_renderer() else 1.0
-	map = (load(WORLD_SCENE) as PackedScene).instantiate() as WorldMap
+	var index := WorldIndex.load_baked()
+	map = ChunkStreamer.create(index)
 	add_child(map)
-	roads = RoadNetwork.build(map)
+	roads = RoadNetwork.from_index(index)
 	var spawn := map.start_transform()
+	await map.load_initial(spawn.origin, INITIAL_LOAD_RADIUS_M)
 
 	player = ArcadeCar.new()
 	player.name = "Player"
@@ -61,6 +66,7 @@ func _ready() -> void:
 	player.respawn_requested.connect(func(_c: ArcadeCar) -> void: respawn_player())
 	add_child(player)
 	player.place(spawn)
+	map.target = player
 	_last_pos = player.global_position
 
 	camera = FollowCamera.new()
@@ -158,6 +164,8 @@ func apply_quality() -> void:
 	get_viewport().msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][q]
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if q >= 1 or software else Viewport.SCREEN_SPACE_AA_FXAA
 	camera.far = 300.0 + GameState.draw_distance * 300.0
+	# Всё, что видит камера, должно быть загружено.
+	map.load_radius_m = camera.far
 	traffic.max_cars = [6, 12, 16][q]
 
 
@@ -181,6 +189,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if loading:
+		return
 	if event.is_action_pressed("pause"):
 		pause_requested.emit()
 		get_viewport().set_input_as_handled()
@@ -196,6 +206,7 @@ func respawn_player() -> void:
 	var near := roads.nearest_road(player.global_position)
 	if near.is_empty():
 		var p := player.global_position
+		map.load_now(p)
 		p.y = ground_height(p, p.y) + 2.0
 		player.place(Transform3D(Basis(Vector3.UP, player.global_rotation.y), p))
 		return
@@ -205,6 +216,7 @@ func respawn_player() -> void:
 	var right := Vector3(-t.z, 0.0, t.x)
 	var e: RoadEdge = near["edge"]
 	var pos: Vector3 = near["pos"] + right * (2.6 if e.is_highway() else 1.6)
+	map.load_now(pos)
 	pos.y = ground_height(pos, pos.y) + 1.2
 	player.place(Transform3D(Basis.looking_at(t, Vector3.UP), pos))
 	camera.snap()

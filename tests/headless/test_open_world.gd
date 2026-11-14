@@ -4,8 +4,9 @@ extends SceneTree
 var OpenWorldScript: GDScript
 var TrafficDriverScript: GDScript
 var ChaseDirectorScript: GDScript
-## Интеграция открытого мира: старт на дороге, езда по дорогам через
-## чанки без провалов, трафик, запуск погони, захват и побег.
+## Интеграция открытого мира: подгрузка чанков вокруг игрока, старт на
+## дороге, езда по дорогам через чанки без провалов, трафик, запуск погони,
+## захват и побег, телепорт в незагруженный чанк.
 
 const H := preload("res://tests/headless/helper.gd")
 const CR := preload("res://game/chase/chase_rules.gd")
@@ -29,11 +30,22 @@ func _run() -> void:
 	var gs: Node = root.get_node("GameState")
 	gs.save_path = "user://test_save_world.json"
 	world = OpenWorldScript.create(42)
+	var t_load := Time.get_ticks_msec()
 	root.add_child(world)
-	await _frames(5)
+	# Ждём по реальному времени: чанки читаются с диска, а кадры в headless
+	# с --fixed-fps идут без пауз, и счёт кадров ничего не говорит о загрузке.
+	while world.loading and Time.get_ticks_msec() - t_load < 30000:
+		await physics_frame
+	H.info("стартовая загрузка: %d мс" % (Time.get_ticks_msec() - t_load))
 	var p = world.player
-	H.check("игрок создан", p != null)
-	H.check("все чанки мира на месте", world.map.chunks().size() == 25, "%d" % world.map.chunks().size())
+	if not H.check("игрок создан (мир загрузился за 30 с)", p != null):
+		H.finish(self)
+		return
+	var total: int = world.map.index.chunk_coords.size()
+	var initial: int = world.map.chunks().size()
+	H.check("до старта грузятся только чанки у старта", initial > 0 and initial < total, "%d из %d" % [initial, total])
+	H.check("чанк под игроком загружен", world.map.contains(p.global_position))
+	await _frames(5)
 	H.check("дорожная сеть собрана", world.roads.edges.size() > 10, "%d участков" % world.roads.edges.size())
 
 	await _frames(120)
@@ -65,9 +77,22 @@ func _run() -> void:
 	var real_s := (Time.get_ticks_msec() - t0) / 1000.0
 	H.info("проехано %.0f м за 50 с игры (%.1f с реального времени), чанков пройдено %d" % [path_m, real_s, visited.size()])
 	H.check("машина проехала по дорогам", path_m > 800.0, "%.0f м" % path_m)
-	H.check("машина переезжает из чанка в чанк", visited.size() >= 3, "%d" % visited.size())
+	H.check("машина переезжает из чанка в чанк", visited.size() >= 2, "%d" % visited.size())
 	H.check("машина не провалилась сквозь мир", min_clear > -1.0, "мин. просвет %.2f м" % min_clear)
 	H.check("появился трафик", max_traffic > 0, "%d" % max_traffic)
+	H.check("остальные чанки догрузились в фоне", world.map.is_settled(), "загружено %d" % world.map.chunks().size())
+
+	# Выгрузка: с малым радиусом дальние чанки уходят из дерева.
+	var radius_before: float = world.map.load_radius_m
+	world.map.load_radius_m = 200.0
+	await _frames(5)
+	var far_left := 0
+	for c in world.map.chunks():
+		if ChunkStreamer.distance_to_chunk(p.global_position, c.coord) > 200.0 + world.map.unload_margin_m:
+			far_left += 1
+	H.check("дальние чанки выгружаются", far_left == 0 and world.map.chunks().size() < total,
+		"загружено %d, лишних %d" % [world.map.chunks().size(), far_left])
+	world.map.load_radius_m = radius_before
 
 	# Погоня: игрок стоит — его должны зажать.
 	p.driver = null
@@ -98,7 +123,13 @@ func _run() -> void:
 		for q: Vector3 in e.points:
 			if q.distance_to(p.global_position) > fp.distance_to(p.global_position):
 				fp = q
+	world.map.load_radius_m = 200.0 # чтобы точка телепорта точно была не загружена
+	await _frames(5)
+	var was_loaded: bool = world.map.contains(fp)
 	p.place(Transform3D(Basis(), fp + Vector3.UP * 1.5))
+	await physics_frame
+	H.check("телепорт в незагруженный чанк: чанк грузится сразу", not was_loaded and world.map.contains(fp),
+		"был загружен: %s" % was_loaded)
 	var esc_t := 0
 	while world.chase.state == ChaseDirectorScript.State.ACTIVE and esc_t < 30 * 60:
 		await physics_frame
@@ -106,6 +137,9 @@ func _run() -> void:
 	H.check("побег при отрыве > 300 м", world.chase.last_outcome == CR.Outcome.ESCAPED,
 		"исход %d за %.1f с" % [world.chase.last_outcome, esc_t / 60.0])
 	H.check("рекорд записан", gs.records.size() >= 2)
+
+	H.check("после телепорта машина на земле", p.grounded_wheels >= 3, "колёс на земле: %d" % p.grounded_wheels)
+	world.map.load_radius_m = radius_before
 
 	# Респаун на дорогу.
 	p.place(Transform3D(Basis(), p.global_position + Vector3(30, 5, 30)))

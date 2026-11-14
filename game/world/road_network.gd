@@ -1,6 +1,7 @@
 class_name RoadNetwork
 extends RefCounted
-## Граф дорог, собранный из всех RoadPath в сцене мира. Узел — точка, где
+## Граф дорог всего мира. В игре строится из WorldIndex (чанки при этом
+## могут быть не загружены), в тестах и инструментах — из RoadPath сцены. Узел — точка, где
 ## сходятся концы участков (ближе WorldDefs.JOIN_DISTANCE_M). Используют
 ## трафик, респаун, поиск точек спавна и радар.
 
@@ -9,20 +10,32 @@ var node_positions: PackedVector3Array = PackedVector3Array()
 var _links: Array = [] ## узел -> Array [индекс ребра, идём_от_начала bool]
 
 
+## Сеть по узлам RoadPath в сцене (сцена должна быть в дереве).
 static func build(root: Node) -> RoadNetwork:
 	var net := RoadNetwork.new()
 	for path: RoadPath in root.find_children("*", "RoadPath", true, false):
-		var pts := path.sample_global_points()
-		if pts.size() < 2:
-			continue
-		var e := RoadEdge.from_points(pts, path.road_type)
-		e.index = net.edges.size()
-		e.a_node = net._node_at(pts[0])
-		e.b_node = net._node_at(pts[pts.size() - 1])
-		net.edges.append(e)
-		net._links[e.a_node].append([e.index, true])
-		net._links[e.b_node].append([e.index, false])
+		net._add_edge(path.sample_global_points(), path.road_type)
 	return net
+
+
+## Сеть по запечённому индексу мира.
+static func from_index(idx: WorldIndex) -> RoadNetwork:
+	var net := RoadNetwork.new()
+	for i in idx.road_points.size():
+		net._add_edge(idx.road_points[i], idx.road_types[i])
+	return net
+
+
+func _add_edge(pts: PackedVector3Array, road_type: int) -> void:
+	if pts.size() < 2:
+		return
+	var e := RoadEdge.from_points(pts, road_type)
+	e.index = edges.size()
+	e.a_node = _node_at(pts[0])
+	e.b_node = _node_at(pts[pts.size() - 1])
+	edges.append(e)
+	_links[e.a_node].append([e.index, true])
+	_links[e.b_node].append([e.index, false])
 
 
 func _node_at(p: Vector3) -> int:

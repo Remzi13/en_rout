@@ -44,7 +44,7 @@
 
 ### Лето — природа
 
-Значения из `tools/world_gen.gd`:
+Значения из `tools/bake_world.gd` (`_terrain_arrays`):
 
 | Роль | Цвет | Hex |
 |---|---|---|

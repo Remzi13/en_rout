@@ -1,139 +1,295 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://game/world/world_map.gd" id="1_gyr8f"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_-2.tscn" id="2_ueoac"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_-2.tscn" id="3_4owp7"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_-2.tscn" id="4_ypy5f"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_-2.tscn" id="5_gf1gx"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_-2.tscn" id="6_33e2v"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_-1.tscn" id="7_688oh"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_-1.tscn" id="8_csybm"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_-1.tscn" id="9_lliwa"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_-1.tscn" id="10_ujd3c"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_-1.tscn" id="11_qmrmb"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_0.tscn" id="12_q2j3q"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_0.tscn" id="13_of7ht"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_0.tscn" id="14_y7unq"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_0.tscn" id="15_8amd8"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_0.tscn" id="16_26yp7"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_1.tscn" id="17_cmhcy"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_1.tscn" id="18_fxuiv"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_1.tscn" id="19_776n1"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_1.tscn" id="20_yc6ra"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_1.tscn" id="21_wn6t0"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_2.tscn" id="22_or2bb"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_2.tscn" id="23_b36sv"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_2.tscn" id="24_u3s2g"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_2.tscn" id="25_o3lnt"]
-[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_2.tscn" id="26_m64dh"]
+[ext_resource type="Script" path="res://game/world/world_map.gd" id="1_ujhku"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_-4.tscn" id="2_pr7v2"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_-4.tscn" id="3_rgh04"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_-4.tscn" id="4_0bvwu"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_-4.tscn" id="5_ouhaa"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_-4.tscn" id="6_qgk5l"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_-4.tscn" id="7_wuqp4"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_-4.tscn" id="8_3bhyg"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_-4.tscn" id="9_hp72q"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_-3.tscn" id="10_34xw7"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_-3.tscn" id="11_0o6mq"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_-3.tscn" id="12_wby1f"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_-3.tscn" id="13_eetxa"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_-3.tscn" id="14_dftdc"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_-3.tscn" id="15_vuxrc"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_-3.tscn" id="16_akgsb"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_-3.tscn" id="17_qsddl"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_-2.tscn" id="18_d2ui8"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_-2.tscn" id="19_qa2rw"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_-2.tscn" id="20_1oq1t"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_-2.tscn" id="21_1fks6"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_-2.tscn" id="22_tr6jv"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_-2.tscn" id="23_7dkmd"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_-2.tscn" id="24_uox7q"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_-2.tscn" id="25_eviwm"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_-1.tscn" id="26_ehlm3"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_-1.tscn" id="27_el8yx"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_-1.tscn" id="28_b0b2b"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_-1.tscn" id="29_7o7yj"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_-1.tscn" id="30_4i6at"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_-1.tscn" id="31_bqdu5"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_-1.tscn" id="32_qa4kr"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_-1.tscn" id="33_ai3q2"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_0.tscn" id="34_065aw"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_0.tscn" id="35_ych1g"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_0.tscn" id="36_171gl"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_0.tscn" id="37_7ve7f"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_0.tscn" id="38_8wkca"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_0.tscn" id="39_yf3dc"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_0.tscn" id="40_litds"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_0.tscn" id="41_xv0ey"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_1.tscn" id="42_7rna8"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_1.tscn" id="43_ferno"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_1.tscn" id="44_rf4os"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_1.tscn" id="45_7liv5"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_1.tscn" id="46_stu24"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_1.tscn" id="47_vn3x3"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_1.tscn" id="48_nanqr"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_1.tscn" id="49_dii2w"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_2.tscn" id="50_c1skd"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_2.tscn" id="51_vwguk"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_2.tscn" id="52_i3puk"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_2.tscn" id="53_5e2jd"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_2.tscn" id="54_8fns2"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_2.tscn" id="55_mps6c"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_2.tscn" id="56_oigwb"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_2.tscn" id="57_cuq8h"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-4_3.tscn" id="58_7y1b6"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-3_3.tscn" id="59_bq7hi"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-2_3.tscn" id="60_aocle"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_-1_3.tscn" id="61_l7c5m"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_0_3.tscn" id="62_lr62l"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_1_3.tscn" id="63_e3vrj"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_2_3.tscn" id="64_ucdsq"]
+[ext_resource type="PackedScene" path="res://game/world/chunks/chunk_3_3.tscn" id="65_05x64"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_gkyn6"]
-size = Vector3(20, 400, 1320)
+[sub_resource type="BoxShape3D" id="BoxShape3D_3r6xe"]
+size = Vector3(20, 400, 2088)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_3ebxj"]
-size = Vector3(20, 400, 1320)
+[sub_resource type="BoxShape3D" id="BoxShape3D_5cthv"]
+size = Vector3(20, 400, 2088)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_8sejk"]
-size = Vector3(1320, 400, 20)
+[sub_resource type="BoxShape3D" id="BoxShape3D_nqgjr"]
+size = Vector3(2088, 400, 20)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_5g5sj"]
-size = Vector3(1320, 400, 20)
+[sub_resource type="BoxShape3D" id="BoxShape3D_dtt4n"]
+size = Vector3(2088, 400, 20)
 
-[node name="World" type="Node3D" unique_id=690156166]
-script = ExtResource("1_gyr8f")
+[node name="World" type="Node3D" unique_id=366765359]
+script = ExtResource("1_ujhku")
 
-[node name="Chunk_-2_-2" parent="." unique_id=2095968296 instance=ExtResource("2_ueoac")]
+[node name="Chunk_-4_-4" parent="." unique_id=408748095 instance=ExtResource("2_pr7v2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -1024)
+
+[node name="Chunk_-3_-4" parent="." unique_id=166477095 instance=ExtResource("3_rgh04")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -1024)
+
+[node name="Chunk_-2_-4" parent="." unique_id=1706778296 instance=ExtResource("4_0bvwu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -1024)
+
+[node name="Chunk_-1_-4" parent="." unique_id=694622617 instance=ExtResource("5_ouhaa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -1024)
+
+[node name="Chunk_0_-4" parent="." unique_id=392752141 instance=ExtResource("6_qgk5l")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1024)
+
+[node name="Chunk_1_-4" parent="." unique_id=662777391 instance=ExtResource("7_wuqp4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -1024)
+
+[node name="Chunk_2_-4" parent="." unique_id=53193388 instance=ExtResource("8_3bhyg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -1024)
+
+[node name="Chunk_3_-4" parent="." unique_id=114089122 instance=ExtResource("9_hp72q")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -1024)
+
+[node name="Chunk_-4_-3" parent="." unique_id=2057077298 instance=ExtResource("10_34xw7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -768)
+
+[node name="Chunk_-3_-3" parent="." unique_id=57077640 instance=ExtResource("11_0o6mq")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -768)
+
+[node name="Chunk_-2_-3" parent="." unique_id=103205396 instance=ExtResource("12_wby1f")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -768)
+
+[node name="Chunk_-1_-3" parent="." unique_id=2029710687 instance=ExtResource("13_eetxa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -768)
+
+[node name="Chunk_0_-3" parent="." unique_id=1178218889 instance=ExtResource("14_dftdc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -768)
+
+[node name="Chunk_1_-3" parent="." unique_id=2003414807 instance=ExtResource("15_vuxrc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -768)
+
+[node name="Chunk_2_-3" parent="." unique_id=428675874 instance=ExtResource("16_akgsb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -768)
+
+[node name="Chunk_3_-3" parent="." unique_id=77467528 instance=ExtResource("17_qsddl")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -768)
+
+[node name="Chunk_-4_-2" parent="." unique_id=1058345573 instance=ExtResource("18_d2ui8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -512)
+
+[node name="Chunk_-3_-2" parent="." unique_id=1473422344 instance=ExtResource("19_qa2rw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -512)
+
+[node name="Chunk_-2_-2" parent="." unique_id=1736007316 instance=ExtResource("20_1oq1t")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -512)
 
-[node name="Chunk_-1_-2" parent="." unique_id=1143942845 instance=ExtResource("3_4owp7")]
+[node name="Chunk_-1_-2" parent="." unique_id=1562042165 instance=ExtResource("21_1fks6")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -512)
 
-[node name="Chunk_0_-2" parent="." unique_id=1891801631 instance=ExtResource("4_ypy5f")]
+[node name="Chunk_0_-2" parent="." unique_id=1407615447 instance=ExtResource("22_tr6jv")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -512)
 
-[node name="Chunk_1_-2" parent="." unique_id=71868876 instance=ExtResource("5_gf1gx")]
+[node name="Chunk_1_-2" parent="." unique_id=402193816 instance=ExtResource("23_7dkmd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -512)
 
-[node name="Chunk_2_-2" parent="." unique_id=1597157845 instance=ExtResource("6_33e2v")]
+[node name="Chunk_2_-2" parent="." unique_id=657966483 instance=ExtResource("24_uox7q")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -512)
 
-[node name="Chunk_-2_-1" parent="." unique_id=73773125 instance=ExtResource("7_688oh")]
+[node name="Chunk_3_-2" parent="." unique_id=2107945412 instance=ExtResource("25_eviwm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -512)
+
+[node name="Chunk_-4_-1" parent="." unique_id=1535386904 instance=ExtResource("26_ehlm3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -256)
+
+[node name="Chunk_-3_-1" parent="." unique_id=1179740939 instance=ExtResource("27_el8yx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -256)
+
+[node name="Chunk_-2_-1" parent="." unique_id=2142655984 instance=ExtResource("28_b0b2b")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -256)
 
-[node name="Chunk_-1_-1" parent="." unique_id=238033466 instance=ExtResource("8_csybm")]
+[node name="Chunk_-1_-1" parent="." unique_id=1568273488 instance=ExtResource("29_7o7yj")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -256)
 
-[node name="Chunk_0_-1" parent="." unique_id=1372176053 instance=ExtResource("9_lliwa")]
+[node name="Chunk_0_-1" parent="." unique_id=1260314285 instance=ExtResource("30_4i6at")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -256)
 
-[node name="Chunk_1_-1" parent="." unique_id=1889538727 instance=ExtResource("10_ujd3c")]
+[node name="Chunk_1_-1" parent="." unique_id=485473046 instance=ExtResource("31_bqdu5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -256)
 
-[node name="Chunk_2_-1" parent="." unique_id=795517435 instance=ExtResource("11_qmrmb")]
+[node name="Chunk_2_-1" parent="." unique_id=742019843 instance=ExtResource("32_qa4kr")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -256)
 
-[node name="Chunk_-2_0" parent="." unique_id=1755547873 instance=ExtResource("12_q2j3q")]
+[node name="Chunk_3_-1" parent="." unique_id=118153748 instance=ExtResource("33_ai3q2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -256)
+
+[node name="Chunk_-4_0" parent="." unique_id=1207547237 instance=ExtResource("34_065aw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 0)
+
+[node name="Chunk_-3_0" parent="." unique_id=285260780 instance=ExtResource("35_ych1g")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 0)
+
+[node name="Chunk_-2_0" parent="." unique_id=1690069442 instance=ExtResource("36_171gl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 0)
 
-[node name="Chunk_-1_0" parent="." unique_id=412333874 instance=ExtResource("13_of7ht")]
+[node name="Chunk_-1_0" parent="." unique_id=646218683 instance=ExtResource("37_7ve7f")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 0)
 
-[node name="Chunk_0_0" parent="." unique_id=28715917 instance=ExtResource("14_y7unq")]
+[node name="Chunk_0_0" parent="." unique_id=299385138 instance=ExtResource("38_8wkca")]
 
-[node name="Chunk_1_0" parent="." unique_id=736009144 instance=ExtResource("15_8amd8")]
+[node name="Chunk_1_0" parent="." unique_id=1987634268 instance=ExtResource("39_yf3dc")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 0)
 
-[node name="Chunk_2_0" parent="." unique_id=715046826 instance=ExtResource("16_26yp7")]
+[node name="Chunk_2_0" parent="." unique_id=786900400 instance=ExtResource("40_litds")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 0)
 
-[node name="Chunk_-2_1" parent="." unique_id=19180622 instance=ExtResource("17_cmhcy")]
+[node name="Chunk_3_0" parent="." unique_id=775061762 instance=ExtResource("41_xv0ey")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 0)
+
+[node name="Chunk_-4_1" parent="." unique_id=641146551 instance=ExtResource("42_7rna8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 256)
+
+[node name="Chunk_-3_1" parent="." unique_id=1548119574 instance=ExtResource("43_ferno")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 256)
+
+[node name="Chunk_-2_1" parent="." unique_id=513493198 instance=ExtResource("44_rf4os")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 256)
 
-[node name="Chunk_-1_1" parent="." unique_id=1709144983 instance=ExtResource("18_fxuiv")]
+[node name="Chunk_-1_1" parent="." unique_id=1112116873 instance=ExtResource("45_7liv5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 256)
 
-[node name="Chunk_0_1" parent="." unique_id=103571425 instance=ExtResource("19_776n1")]
+[node name="Chunk_0_1" parent="." unique_id=622664473 instance=ExtResource("46_stu24")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 256)
 
-[node name="Chunk_1_1" parent="." unique_id=548063506 instance=ExtResource("20_yc6ra")]
+[node name="Chunk_1_1" parent="." unique_id=1429127827 instance=ExtResource("47_vn3x3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 256)
 
-[node name="Chunk_2_1" parent="." unique_id=2082315013 instance=ExtResource("21_wn6t0")]
+[node name="Chunk_2_1" parent="." unique_id=1671189353 instance=ExtResource("48_nanqr")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 256)
 
-[node name="Chunk_-2_2" parent="." unique_id=936909480 instance=ExtResource("22_or2bb")]
+[node name="Chunk_3_1" parent="." unique_id=1138204389 instance=ExtResource("49_dii2w")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 256)
+
+[node name="Chunk_-4_2" parent="." unique_id=86848099 instance=ExtResource("50_c1skd")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 512)
+
+[node name="Chunk_-3_2" parent="." unique_id=995913378 instance=ExtResource("51_vwguk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 512)
+
+[node name="Chunk_-2_2" parent="." unique_id=943535643 instance=ExtResource("52_i3puk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 512)
 
-[node name="Chunk_-1_2" parent="." unique_id=1056876893 instance=ExtResource("23_b36sv")]
+[node name="Chunk_-1_2" parent="." unique_id=2062091854 instance=ExtResource("53_5e2jd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 512)
 
-[node name="Chunk_0_2" parent="." unique_id=1998014568 instance=ExtResource("24_u3s2g")]
+[node name="Chunk_0_2" parent="." unique_id=406390565 instance=ExtResource("54_8fns2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 512)
 
-[node name="Chunk_1_2" parent="." unique_id=61584078 instance=ExtResource("25_o3lnt")]
+[node name="Chunk_1_2" parent="." unique_id=154368204 instance=ExtResource("55_mps6c")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 512)
 
-[node name="Chunk_2_2" parent="." unique_id=1475875939 instance=ExtResource("26_m64dh")]
+[node name="Chunk_2_2" parent="." unique_id=396999209 instance=ExtResource("56_oigwb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 512)
 
-[node name="PlayerStart" type="Marker3D" parent="." unique_id=49647416]
-transform = Transform3D(-0.3749434, 0, -0.9270477, 0, 1, 0, 0.9270477, 0, -0.3749434, 48.344704, 3.1806598, -6.939828)
+[node name="Chunk_3_2" parent="." unique_id=1965200959 instance=ExtResource("57_cuq8h")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 512)
 
-[node name="Bounds" type="StaticBody3D" parent="." unique_id=1084711771]
+[node name="Chunk_-4_3" parent="." unique_id=331032949 instance=ExtResource("58_7y1b6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 768)
+
+[node name="Chunk_-3_3" parent="." unique_id=1529183414 instance=ExtResource("59_bq7hi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 768)
+
+[node name="Chunk_-2_3" parent="." unique_id=213412810 instance=ExtResource("60_aocle")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 768)
+
+[node name="Chunk_-1_3" parent="." unique_id=1807712660 instance=ExtResource("61_l7c5m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 768)
+
+[node name="Chunk_0_3" parent="." unique_id=400449276 instance=ExtResource("62_lr62l")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 768)
+
+[node name="Chunk_1_3" parent="." unique_id=14621823 instance=ExtResource("63_e3vrj")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 768)
+
+[node name="Chunk_2_3" parent="." unique_id=366391855 instance=ExtResource("64_ucdsq")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 768)
+
+[node name="Chunk_3_3" parent="." unique_id=1881696300 instance=ExtResource("65_05x64")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 768)
+
+[node name="PlayerStart" type="Marker3D" parent="." unique_id=1000588846]
+transform = Transform3D(0.2392403, 0, -0.97096044, 0, 1.0000001, 0, 0.97096044, 0, 0.2392403, -218.97763, 14.441445, 86.33923)
+
+[node name="Bounds" type="StaticBody3D" parent="." unique_id=52956729]
 collision_mask = 0
 
-[node name="Wall0" type="CollisionShape3D" parent="Bounds" unique_id=2007630753]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -522, 0, 128)
-shape = SubResource("BoxShape3D_gkyn6")
+[node name="Wall0" type="CollisionShape3D" parent="Bounds" unique_id=881423425]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1034, 0, 0)
+shape = SubResource("BoxShape3D_3r6xe")
 
-[node name="Wall1" type="CollisionShape3D" parent="Bounds" unique_id=1983313502]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 778, 0, 128)
-shape = SubResource("BoxShape3D_3ebxj")
+[node name="Wall1" type="CollisionShape3D" parent="Bounds" unique_id=1901175528]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1034, 0, 0)
+shape = SubResource("BoxShape3D_5cthv")
 
-[node name="Wall2" type="CollisionShape3D" parent="Bounds" unique_id=383318565]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 128, 0, -522)
-shape = SubResource("BoxShape3D_8sejk")
+[node name="Wall2" type="CollisionShape3D" parent="Bounds" unique_id=1583772895]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1034)
+shape = SubResource("BoxShape3D_nqgjr")
 
-[node name="Wall3" type="CollisionShape3D" parent="Bounds" unique_id=412538474]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 128, 0, 778)
-shape = SubResource("BoxShape3D_5g5sj")
+[node name="Wall3" type="CollisionShape3D" parent="Bounds" unique_id=386442010]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1034)
+shape = SubResource("BoxShape3D_dtt4n")

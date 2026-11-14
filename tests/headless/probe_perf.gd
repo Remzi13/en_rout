@@ -16,7 +16,11 @@ func _run() -> void:
 	var t := Time.get_ticks_usec()
 	var w = OpenWorldScript.create(42)
 	root.add_child(w)
-	print("создание мира: %d мс" % ((Time.get_ticks_usec() - t) / 1000))
+	while w.loading:
+		await process_frame
+	print("создание мира: %d мс, чанков %d, добавление чанка до %.0f мс" % [(Time.get_ticks_usec() - t) / 1000,
+		w.map.chunks().size(), w.map.max_add_ms])
+	w.map.chunk_loaded.connect(func(c: Vector2i) -> void: print("  чанк %s: %.0f мс" % [c, w.map.last_add_ms]))
 	for phase in ["idle", "drive"]:
 		if phase == "drive":
 			var auto = TrafficDriverScript.new()
