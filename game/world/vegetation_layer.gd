@@ -23,8 +23,6 @@ enum TreePreset {
 
 ## Запас радиуса коллизии дерева относительно радиуса ствола.
 const TRUNK_COLLIDER_MARGIN := 1.15
-## Гистерезис переключения ближней и дальней модели, м.
-const LOD_MARGIN_M := 15.0
 
 ## Радиус и высота цилиндра при масштабе экземпляра 1. Радиус 0 — без коллизии.
 ## Для деревьев с набором радиус берётся из толщины ствола модели.
@@ -49,13 +47,25 @@ const LOD_MARGIN_M := 15.0
 	set(v):
 		variant_seed = v
 		_rebuild_in_editor()
-## Дальше этого расстояния до центра слоя рисуются упрощённые модели. 0 — всегда основные.
-@export var lod_distance: float = 270.0:
+## Дальше этого расстояния до центра ячейки рисуются упрощённые модели (они же
+## не отбрасывают тень). 0 — всегда основные.
+@export var lod_distance: float = 160.0:
 	set(v):
 		lod_distance = v
 		_rebuild_in_editor()
+## Сторона ячейки, на которые делится слой, м: у каждой ячейки свой MultiMesh,
+## поэтому отсечение по камере, дальность и тени считаются для куска леса,
+## а не для всего чанка. 0 — весь слой одним куском.
+@export var cell_size_m: float = 128.0:
+	set(v):
+		cell_size_m = v
+		_rebuild_in_editor()
 ## Пересобрать деревья после правки MultiMesh или набора в редакторе.
 @export_tool_button("Перестроить деревья", "Reload") var rebuild_action = rebuild_trees
+
+## Множитель дальности прорисовки и смены моделей для всех слоёв. Задаётся до
+## загрузки мира (OpenWorld уменьшает его при рендере без видеокарты).
+static var distance_scale: float = 1.0
 
 var _body: RID
 var _tree_nodes: Array[MultiMeshInstance3D] = []
@@ -66,6 +76,9 @@ func _ready() -> void:
 	# В headless (тесты) MultiMesh не хранит трансформы — все деревья и формы встали бы в угол чанка.
 	if DisplayServer.get_name() == "headless":
 		return
+	if not Engine.is_editor_hint() and distance_scale != 1.0:
+		visibility_range_end *= distance_scale
+		lod_distance *= distance_scale
 	rebuild_trees()
 	if Engine.is_editor_hint():
 		return
@@ -112,11 +125,11 @@ func rebuild_trees() -> void:
 	var count := multimesh.instance_count
 	var colors := multimesh.use_colors
 	var rng := RandomNumberGenerator.new()
-	var xforms: Array[Array] = [] ## по моделям: Array[Transform3D]
-	var tints: Array[Array] = [] ## по моделям: Array[Color]
+	var xforms: Array[Dictionary] = [] ## по моделям: ячейка (Vector2i) -> Array[Transform3D]
+	var tints: Array[Dictionary] = [] ## по моделям: ячейка (Vector2i) -> Array[Color]
 	for k in models.size():
-		xforms.append([])
-		tints.append([])
+		xforms.append({})
+		tints.append({})
 	_trunk_radius.resize(count)
 	for i in count:
 		var xf := multimesh.get_instance_transform(i)
@@ -139,7 +152,13 @@ func rebuild_trees() -> void:
 		_trunk_radius[i] = tm.trunk_radius_m * width * xf.basis.get_scale().x
 		# Масштаб в локальных осях дерева: поворот экземпляра сохраняется.
 		xf.basis = xf.basis * Basis.from_scale(Vector3(width, height, width))
-		xforms[mi].append(xf)
+		var cell := Vector2i.ZERO
+		if cell_size_m > 0.0:
+			cell = Vector2i(floori(xf.origin.x / cell_size_m), floori(xf.origin.z / cell_size_m))
+		if not xforms[mi].has(cell):
+			xforms[mi][cell] = []
+			tints[mi][cell] = []
+		xforms[mi][cell].append(xf)
 		var value := 1.0 + rng.randf_range(-tm.value_jitter, tm.value_jitter)
 		var hue := rng.randf_range(-tm.hue_jitter, tm.hue_jitter)
 		# Сдвиг оттенка: в плюс — желтее, в минус — холоднее.
@@ -147,7 +166,7 @@ func rebuild_trees() -> void:
 		if colors:
 			var base := multimesh.get_instance_color(i)
 			tint = Color(tint.r * base.r, tint.g * base.g, tint.b * base.b)
-		tints[mi].append(tint)
+		tints[mi][cell].append(tint)
 
 	for mi in models.size():
 		if xforms[mi].is_empty():
@@ -168,10 +187,13 @@ func rebuild_trees() -> void:
 			near_end = lod_distance
 			if visibility_range_end > 0.0:
 				near_end = minf(lod_distance, visibility_range_end)
-		_add_tree_node("Tree%d" % mi, near_mesh, xforms[mi], tints[mi], visibility_range_begin, near_end,
-			far_mesh != null)
-		if far_mesh != null and (visibility_range_end <= 0.0 or visibility_range_end > lod_distance):
-			_add_tree_node("Tree%dFar" % mi, far_mesh, xforms[mi], tints[mi], lod_distance, visibility_range_end, false)
+		for cell: Vector2i in xforms[mi]:
+			var suffix := "%d_%d_%d" % [mi, cell.x, cell.y]
+			_add_tree_node("Tree" + suffix, near_mesh, xforms[mi][cell], tints[mi][cell],
+				visibility_range_begin, near_end, far_mesh != null)
+			if far_mesh != null and (visibility_range_end <= 0.0 or visibility_range_end > lod_distance):
+				_add_tree_node("TreeFar" + suffix, far_mesh, xforms[mi][cell], tints[mi][cell],
+					lod_distance, visibility_range_end, false)
 
 
 ## Дочерний MultiMesh одной модели. lod_split — это ближняя половина пары «ближний/дальний».
@@ -190,11 +212,14 @@ func _add_tree_node(node_name: String, mesh: Mesh, xforms: Array, tints: Array,
 	node.multimesh = mm
 	node.visibility_range_begin = range_begin
 	node.visibility_range_end = range_end
-	# На стыке ближней и дальней модели — свой гистерезис, на краях — как у слоя.
+	# На стыке ближней и дальней модели гистерезиса нет: с ним в полосе вокруг
+	# порога обе модели скрыты, пока камера не пересечёт её (дыра в лесу после
+	# появления или телепорта). На краях — как у слоя.
 	var is_far := range_begin > visibility_range_begin
-	node.visibility_range_begin_margin = LOD_MARGIN_M if is_far else visibility_range_begin_margin
-	node.visibility_range_end_margin = LOD_MARGIN_M if lod_split else visibility_range_end_margin
-	node.cast_shadow = cast_shadow
+	node.visibility_range_begin_margin = 0.0 if is_far else visibility_range_begin_margin
+	node.visibility_range_end_margin = 0.0 if lod_split else visibility_range_end_margin
+	# Дальние упрощённые деревья тень не отбрасывают: она за дальностью теней или едва заметна.
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if is_far else cast_shadow
 	node.layers = layers
 	add_child(node, false, Node.INTERNAL_MODE_BACK)
 	_tree_nodes.append(node)

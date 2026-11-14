@@ -45,6 +45,8 @@ func _ready() -> void:
 	materials = WorldMaterials.shared()
 	_build_environment()
 
+	# Без видеокарты главный расход — треугольники деревьев: рисуем их ближе.
+	VegetationLayer.distance_scale = 0.5 if is_software_renderer() else 1.0
 	map = (load(WORLD_SCENE) as PackedScene).instantiate() as WorldMap
 	add_child(map)
 	roads = RoadNetwork.build(map)
@@ -139,6 +141,12 @@ func _build_environment() -> void:
 ## Настройки качества и дальности (применяются и из меню паузы).
 func apply_quality() -> void:
 	var q := GameState.quality
+	# Без видеокарты (виртуальная машина) каждый пиксель считает процессор:
+	# тени, MSAA и полное разрешение дают меньше кадра в секунду.
+	var software := is_software_renderer()
+	if software:
+		q = 0
+	get_viewport().scaling_3d_scale = 0.5 if software else 1.0
 	sun.shadow_enabled = q >= 1
 	sun.directional_shadow_max_distance = [80.0, 160.0, 260.0][q]
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if q < 2 else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
@@ -148,9 +156,18 @@ func apply_quality() -> void:
 	env.ssil_enabled = forward_plus and q >= 2
 	env.sdfgi_enabled = false
 	get_viewport().msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][q]
-	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if q >= 1 else Viewport.SCREEN_SPACE_AA_FXAA
+	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if q >= 1 or software else Viewport.SCREEN_SPACE_AA_FXAA
 	camera.far = 300.0 + GameState.draw_distance * 300.0
 	traffic.max_cars = [6, 12, 16][q]
+
+
+## Рендер идёт на процессоре (llvmpipe и подобные), а не на видеокарте.
+static func is_software_renderer() -> bool:
+	var adapter := RenderingServer.get_video_adapter_name().to_lower()
+	for marker in ["llvmpipe", "softpipe", "lavapipe", "swiftshader", "software"]:
+		if adapter.contains(marker):
+			return true
+	return false
 
 
 func _physics_process(delta: float) -> void:
