@@ -4,9 +4,9 @@ extends Camera3D
 ## курсу, FOV растёт со скоростью, трясётся при ударах и не проходит
 ## сквозь рельеф (луч от машины к камере).
 
-@export_range(4.0, 12.0) var distance_m: float = 6.5
-@export_range(1.0, 5.0) var height_m: float = 2.3
-@export_range(0.0, 8.0) var look_ahead_m: float = 3.0
+@export_range(4.0, 12.0) var distance_m: float = 4.2
+@export_range(1.0, 5.0) var height_m: float = 1.5
+@export_range(0.0, 8.0) var look_ahead_m: float = 2.0
 @export_range(2.0, 20.0) var follow_lerp: float = 6.0
 @export_range(55.0, 80.0) var fov_base_deg: float = 68.0
 @export_range(65.0, 100.0) var fov_max_deg: float = 86.0

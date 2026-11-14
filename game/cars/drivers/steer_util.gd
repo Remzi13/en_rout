@@ -24,7 +24,7 @@ static func probe(car: ArcadeCar, yaw_deg: float, length: float, mask: int, igno
 	var fwd := (-car.global_basis.z).rotated(Vector3.UP, deg_to_rad(-yaw_deg))
 	fwd.y *= 0.3
 	fwd = fwd.normalized()
-	var from := car.global_position + Vector3.UP * 0.4 + fwd * (car.stats.body_size.z * 0.5 + 0.2)
+	var from := car.global_position + Vector3.UP * 0.4 + fwd * (car.stats.scaled_size().z * 0.5 + 0.2)
 	var q := PhysicsRayQueryParameters3D.create(from, from + fwd * length, mask, [car.get_rid()])
 	var hit := car.get_world_3d().direct_space_state.intersect_ray(q)
 	if hit.is_empty():

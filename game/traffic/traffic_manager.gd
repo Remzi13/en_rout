@@ -60,7 +60,7 @@ func _check_near_miss(car: ArcadeCar, player: ArcadeCar, d: float) -> void:
 	if player.get_colliding_bodies().has(car):
 		car.set_meta("nm_cool", 3.0) # столкновение — не «пролёт»
 		return
-	if d < near_miss_distance_m + player.stats.body_size.x and player.get_speed_kmh() > near_miss_min_kmh:
+	if d < near_miss_distance_m + player.stats.scaled_size().x and player.get_speed_kmh() > near_miss_min_kmh:
 		var rel := (player.linear_velocity - car.linear_velocity).length() * 3.6
 		if rel > 40.0:
 			car.set_meta("nm_cool", 3.0)

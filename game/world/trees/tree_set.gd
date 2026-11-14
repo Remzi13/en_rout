@@ -13,7 +13,7 @@ extends Resource
 ## Модели набора.
 @export var models: Array[TreeModel] = []
 ## Общий множитель размера всех деревьев набора.
-@export_range(0.3, 3.0, 0.01) var size_scale: float = 1.0
+@export_range(0.3, 3.0, 0.01) var size_scale: float = 1.6
 ## Общий цвет, на который умножается листва (поверх leaf_tint модели).
 @export var leaf_tint: Color = Color.WHITE
 ## Зерно вариаций: меняет раскладку моделей и разбросы у всех экземпляров.
@@ -53,7 +53,7 @@ static func leafy_forest() -> TreeSet:
 		s.add(TreeModel.create("oak_a", 0.2, 0.36))
 		s.add(TreeModel.create("oak_b", 0.17, 0.4))
 		var poplar := s.add(TreeModel.create("poplar_a", 0.18, 0.2))
-		poplar.width_scale = Vector2(0.9, 1.1)
+		poplar.width_scale = Vector2(0.8, 1.2)
 		s.add(TreeModel.create("dead_a", 0.05, 0.22))
 		_leafy = s
 	return _leafy

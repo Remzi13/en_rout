@@ -3,6 +3,9 @@ extends Resource
 ## Характеристики машины (аркадная модель ArcadeCar). Отдельные .tres
 ## для игрока, трафика и уличных гонщиков лежат рядом в game/cars/stats/.
 
+## Общий масштаб машин (кузов, колёса, подвеска). Меняйте здесь.
+const SCALE := 0.6
+
 @export_group("Скорость")
 @export_range(60.0, 320.0) var max_speed_kmh: float = 200.0
 @export_range(4.0, 30.0) var acceleration_mps2: float = 13.0
@@ -33,3 +36,8 @@ extends Resource
 @export_range(20000.0, 200000.0) var suspension_stiffness: float = 70000.0
 @export_range(1000.0, 20000.0) var suspension_damping: float = 5500.0
 @export var body_size: Vector3 = Vector3(1.9, 1.3, 4.3)
+
+
+## Размер кузова с учётом SCALE.
+func scaled_size() -> Vector3:
+	return body_size * SCALE

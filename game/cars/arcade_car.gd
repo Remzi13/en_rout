@@ -83,30 +83,32 @@ func _ready() -> void:
 	pm.bounce = 0.15
 	physics_material_override = pm
 
+	var bs := stats.scaled_size()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(stats.body_size.x, stats.body_size.y * 0.8, stats.body_size.z)
+	shape.size = Vector3(bs.x, bs.y * 0.8, bs.z)
 	var cs := CollisionShape3D.new()
 	cs.shape = shape
-	cs.position.y = stats.body_size.y * 0.1
+	cs.position.y = bs.y * 0.1
 	add_child(cs)
 
 	model = MODEL_SCENE.instantiate() as CarModel
 	model.style = style
 	model.body_color = body_color
-	model.size = stats.body_size
+	model.size = bs
+	model.unit = CarStats.SCALE
 	add_child(model)
 	for p in model.wheel_positions():
-		_mounts.append(Vector3(p.x, -stats.body_size.y * 0.5 + 0.05, p.z))
+		_mounts.append(Vector3(p.x, -bs.y * 0.5 + 0.05, p.z))
 	_wheel_dist.resize(_mounts.size())
-	_wheel_dist.fill(stats.ride_height_m)
+	_wheel_dist.fill(stats.ride_height_m * CarStats.SCALE)
 	var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 	var static_load := mass * (gravity + stats.extra_gravity_mps2) / _mounts.size()
-	_rest_length = stats.ride_height_m + static_load / stats.suspension_stiffness
+	_rest_length = stats.ride_height_m * CarStats.SCALE + static_load / stats.suspension_stiffness
 
 	if with_headlights:
 		for sx in [-1.0, 1.0]:
 			var l := SpotLight3D.new()
-			l.position = Vector3(sx * stats.body_size.x * 0.33, 0.0, -stats.body_size.z * 0.5 - 0.1)
+			l.position = Vector3(sx * bs.x * 0.33, 0.0, -bs.z * 0.5 - 0.1)
 			l.rotation_degrees = Vector3(-6, 0, 0)
 			l.spot_range = 70.0
 			l.spot_angle = 35.0
@@ -140,7 +142,7 @@ func _physics_process(delta: float) -> void:
 	drop.resize(_wheel_dist.size())
 	for i in _wheel_dist.size():
 		drop[i] = _wheel_dist[i] - _rest_length + 0.1
-	model.update_wheels(steer_angle_deg, drop, v * delta / CarModel.WHEEL_RADIUS)
+	model.update_wheels(steer_angle_deg, drop, v * delta / model.wheel_radius())
 	model.set_brake(controls.brake > 0.1 and v > 1.0)
 	_update_lights()
 

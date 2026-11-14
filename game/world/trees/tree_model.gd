@@ -15,9 +15,9 @@ extends Resource
 ## Радиус ствола у земли при масштабе 1, м — для коллизии.
 @export_range(0.05, 1.0, 0.01) var trunk_radius_m: float = 0.2
 ## Разброс высоты экземпляров: множитель от и до.
-@export var height_scale: Vector2 = Vector2(0.85, 1.2)
+@export var height_scale: Vector2 = Vector2(0.7, 1.9)
 ## Разброс ширины (кроны и ствола): множитель от и до.
-@export var width_scale: Vector2 = Vector2(0.9, 1.15)
+@export var width_scale: Vector2 = Vector2(0.75, 1.5)
 ## Цвет, на который умножается листва модели (белый — как в модели).
 @export var leaf_tint: Color = Color.WHITE
 ## Разброс оттенка листвы между экземплярами (доля круга оттенков).

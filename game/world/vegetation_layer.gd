@@ -130,8 +130,12 @@ func rebuild_trees() -> void:
 				mi = k
 				break
 		var tm := models[mi]
-		var width := rng.randf_range(tm.width_scale.x, tm.width_scale.y) * ts.size_scale
-		var height := rng.randf_range(tm.height_scale.x, tm.height_scale.y) * ts.size_scale
+		# Высота и ширина связаны: высокое дерево шире и толще молодого, иначе
+		# крупные деревья выходят тощими, а мелкие — пухлыми.
+		var t := rng.randf()
+		var tw := clampf(t * 0.7 + rng.randf() * 0.3, 0.0, 1.0)
+		var width := lerpf(tm.width_scale.x, tm.width_scale.y, tw) * ts.size_scale
+		var height := lerpf(tm.height_scale.x, tm.height_scale.y, t) * ts.size_scale
 		_trunk_radius[i] = tm.trunk_radius_m * width * xf.basis.get_scale().x
 		# Масштаб в локальных осях дерева: поворот экземпляра сохраняется.
 		xf.basis = xf.basis * Basis.from_scale(Vector3(width, height, width))

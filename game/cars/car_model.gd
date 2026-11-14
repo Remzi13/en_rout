@@ -11,6 +11,8 @@ const WHEEL_RADIUS := 0.36
 @export var style: Style = Style.SPORT
 @export var body_color: Color = Color(0.9, 0.35, 0.1)
 @export var size: Vector3 = Vector3(1.9, 1.3, 4.3)
+## Масштаб мелких деталей (колёса, фары, отступы) относительно базовой модели.
+@export var unit: float = 1.0
 
 var _wheels: Array[Node3D] = []
 var _spinners: Array[Node3D] = []
@@ -58,7 +60,7 @@ func build() -> void:
 	var w := size.x
 	var l := size.z
 	var lower_h := size.y * 0.45
-	var lower_y := -size.y * 0.5 + 0.35 + lower_h * 0.5
+	var lower_y := -size.y * 0.5 + 0.35 * unit + lower_h * 0.5
 	var cabin_h := size.y * 0.42
 	var cabin_len := l * 0.48
 	var cabin_z := 0.15
@@ -92,9 +94,9 @@ func build() -> void:
 		_box("Stripe", Vector3(0.35, 0.02, l * 1.001), Vector3(0, lower_y + lower_h * 0.5 + 0.005, 0), stripe)
 
 	var tire := CylinderMesh.new()
-	tire.top_radius = WHEEL_RADIUS
-	tire.bottom_radius = WHEEL_RADIUS
-	tire.height = 0.28
+	tire.top_radius = wheel_radius()
+	tire.bottom_radius = wheel_radius()
+	tire.height = 0.28 * unit
 	tire.radial_segments = 14
 	tire.rings = 1
 	var rubber := StandardMaterial3D.new()
@@ -102,9 +104,9 @@ func build() -> void:
 	rubber.roughness = 0.9
 	tire.material = rubber
 	var rim := CylinderMesh.new()
-	rim.top_radius = WHEEL_RADIUS * 0.6
-	rim.bottom_radius = WHEEL_RADIUS * 0.6
-	rim.height = 0.3
+	rim.top_radius = wheel_radius() * 0.6
+	rim.bottom_radius = wheel_radius() * 0.6
+	rim.height = 0.3 * unit
 	rim.radial_segments = 8
 	rim.rings = 1
 	var rim_mat := StandardMaterial3D.new()
@@ -128,11 +130,15 @@ func build() -> void:
 		_rest.append(p)
 
 
+func wheel_radius() -> float:
+	return WHEEL_RADIUS * unit
+
+
 ## Точки крепления колёс: FL, FR, RL, RR (на уровне низа кузова).
 func wheel_positions() -> Array[Vector3]:
-	var x := size.x * 0.5 - 0.12
-	var z := size.z * 0.5 - 0.75
-	var y := -size.y * 0.5 + WHEEL_RADIUS
+	var x := size.x * 0.5 - 0.12 * unit
+	var z := size.z * 0.5 - 0.75 * unit
+	var y := -size.y * 0.5 + wheel_radius()
 	return [Vector3(-x, y, -z), Vector3(x, y, -z), Vector3(-x, y, z), Vector3(x, y, z)]
 
 

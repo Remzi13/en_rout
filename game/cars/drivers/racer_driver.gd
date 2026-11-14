@@ -89,7 +89,7 @@ func update_input(car: ArcadeCar, c: ArcadeCar.CarControls, delta: float) -> voi
 	var target_kmh := target.get_speed_kmh()
 	if dist < 30.0 and target_kmh < 20.0:
 		c.handbrake = false
-		var stop_at := 5.0 + car.stats.body_size.z * 0.5
+		var stop_at := 5.0 + car.stats.scaled_size().z * 0.5
 		var want := maxf((dist - stop_at) * 0.7, 0.0) + target_kmh / 3.6
 		c.throttle = 0.0
 		c.brake = 0.0
