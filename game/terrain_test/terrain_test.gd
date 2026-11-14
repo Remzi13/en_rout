@@ -68,25 +68,16 @@ func _respawn(pos: Vector3 = Vector3.INF, forward: Vector3 = Vector3.ZERO) -> vo
 	camera.snap()
 
 
+## Свет и небо как в игре (OpenWorld), солнце ведёт DayNight: 10 утра, сутки
+## не идут, чтобы снимки можно было сравнивать.
 func _build_environment() -> void:
-	var sky_mat := ProceduralSkyMaterial.new()
-	var sky := Sky.new()
-	sky.sky_material = sky_mat
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.fog_enabled = true
-	env.fog_density = 0.0012
-	env.fog_aerial_perspective = 0.4
-	var we := WorldEnvironment.new()
-	we.environment = env
-	add_child(we)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-50.0, -35.0, 0.0)
+	var lighting := OpenWorld.build_lighting(self)
+	var sun: DirectionalLight3D = lighting["sun"]
 	sun.shadow_enabled = not OpenWorld.is_software_renderer()
-	add_child(sun)
+	var day_night := DayNight.new()
+	add_child(day_night)
+	day_night.setup(sun, lighting["env"], lighting["sky"])
+	day_night.set_process(false)
 
 
 func _build_water() -> void:

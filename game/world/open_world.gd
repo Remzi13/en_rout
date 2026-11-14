@@ -108,11 +108,20 @@ func _ready() -> void:
 
 
 func _build_environment() -> void:
-	sky_mat = ProceduralSkyMaterial.new()
+	var lighting := build_lighting(self)
+	env = lighting["env"]
+	sun = lighting["sun"]
+	sky_mat = lighting["sky"]
+
+
+## Небо, окружение и солнце мира; добавляет их в parent. Цвета и положение
+## солнца потом ведёт DayNight. Возвращает {env, sun, sky}.
+static func build_lighting(parent: Node) -> Dictionary:
+	var sky_mat := ProceduralSkyMaterial.new()
 	sky_mat.sun_curve = 0.1
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
-	env = Environment.new()
+	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -132,16 +141,17 @@ func _build_environment() -> void:
 	env.adjustment_saturation = 1.05
 	var we := WorldEnvironment.new()
 	we.environment = env
-	add_child(we)
+	parent.add_child(we)
 
-	sun = DirectionalLight3D.new()
+	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	sun.directional_shadow_max_distance = 160.0
 	sun.shadow_bias = 0.05
 	sun.shadow_blur = 1.5
-	add_child(sun)
+	parent.add_child(sun)
+	return {"env": env, "sun": sun, "sky": sky_mat}
 
 
 ## Настройки качества и дальности (применяются и из меню паузы).

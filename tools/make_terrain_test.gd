@@ -66,22 +66,40 @@ func _run() -> void:
 	terrain.data_directory = DATA_DIR
 
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(TEX_DIR))
-	terrain.assets.set_texture_asset(0, _texture_asset("Поле", "field", C_FIELD, 0.05, 1))
-	terrain.assets.set_texture_asset(1, _texture_asset("Скала", "rock", C_ROCK, 0.09, 2))
-	terrain.assets.set_texture_asset(2, _texture_asset("Грунт", "dirt", C_DIRT, 0.07, 3))
+	# Мягкие бугры поля, угловатые плиты скалы, мелкие кочки грунта.
+	terrain.assets.set_texture_asset(0, _texture_asset("Поле", "field", C_FIELD,
+		{"jitter": 0.05, "seed": 1, "freq": 0.03, "bump": 3.0, "depth": 0.6, "uv": 0.1, "rough": 0.95}))
+	terrain.assets.set_texture_asset(1, _texture_asset("Скала", "rock", C_ROCK,
+		{"jitter": 0.12, "seed": 2, "freq": 0.025, "bump": 10.0, "depth": 1.0, "uv": 0.06, "rough": 0.85, "cellular": true}))
+	terrain.assets.set_texture_asset(2, _texture_asset("Грунт", "dirt", C_DIRT,
+		{"jitter": 0.08, "seed": 3, "freq": 0.05, "bump": 6.0, "depth": 0.8, "uv": 0.1, "rough": 1.0}))
 	ResourceSaver.save(terrain.assets, ASSETS_PATH, ResourceSaver.FLAG_COMPRESS)
 	terrain.assets = load(ASSETS_PATH)
 
-	# Скала сама ложится на крутые склоны, остальное — поле. Грунт — для кисти.
-	terrain.material.world_background = Terrain3DMaterial.NONE
-	terrain.material.auto_shader_enabled = true
-	# В Terrain3D base — текстура склонов, overlay — ровных мест. auto_slope 2:
-	# скала проступает с ~30° и полностью закрывает склоны круче ~45°.
-	terrain.material.set_shader_param("auto_slope", 2.0)
-	terrain.material.set_shader_param("auto_height_reduction", 0.0)
-	terrain.material.set_shader_param("auto_base_texture", 1)
-	terrain.material.set_shader_param("auto_overlay_texture", 0)
-	terrain.material.set_shader_param("blend_sharpness", 0.9)
+	var mat := terrain.material
+	# За краем карты — холмы из шума до горизонта (только картинка, без коллизии).
+	mat.world_background = Terrain3DMaterial.NOISE
+	mat.set_shader_param("ground_level", 0.0)
+	mat.set_shader_param("world_noise_height", 40.0)
+	mat.set_shader_param("world_noise_scale", 5.0)
+	mat.set_shader_param("world_noise_max_octaves", 3) # дальний фон, детали не нужны
+	# Скала сама ложится на склоны, остальное — поле. Грунт — для кисти.
+	# В Terrain3D base — текстура склонов, overlay — ровных мест. Доля скалы
+	# 1 - 2·auto_slope·(1 - cos угла): при 2.5 — наполовину на ~26°, целиком на ~37°.
+	# Склоны карты не круче ~35°, 90% площади положе 25°: скала только на крутых.
+	mat.auto_shader_enabled = true
+	mat.set_shader_param("auto_slope", 2.5)
+	mat.set_shader_param("auto_height_reduction", 0.0)
+	mat.set_shader_param("auto_base_texture", 1)
+	mat.set_shader_param("auto_overlay_texture", 0)
+	mat.set_shader_param("blend_sharpness", 0.6)
+	# Крупные пятна оттенка на сотни метров, чтобы поле не было однотонным.
+	# Оба оттенка темнее белого на ~10%: приглушают зелень до палитры.
+	mat.macro_variation_enabled = true
+	mat.set_shader_param("noise_texture", _macro_noise())
+	mat.set_shader_param("macro_variation1", Color(0.86, 0.9, 0.86))
+	mat.set_shader_param("macro_variation2", Color(0.92, 0.88, 0.8))
+	mat.set_shader_param("macro_variation_slope", 0.333)
 	# Жёсткие грани, как у low-poly мира (docs/visual-style.md).
 	terrain.material.set_shader_param("flat_terrain_normals", true)
 
@@ -104,40 +122,83 @@ func _run() -> void:
 	quit(0)
 
 
-## Однотонная текстура с лёгким шумом (по стилю: без фототекстур).
-## В альфе альбедо — высота для смешивания, в альфе нормали — шероховатость.
-func _texture_asset(asset_name: String, file_key: String, base: Color, jitter: float, seed_value: int) -> Terrain3DTextureAsset:
+## Текстура поверхности без фототекстур (docs/visual-style.md): однотонный
+## цвет с лёгким шумом и карта нормалей из того же шума — бугры видны светом,
+## а не рисунком. В альфе альбедо — высота для смешивания текстур, в альфе
+## нормали — шероховатость.
+## opt: jitter (разброс яркости), seed, freq (частота шума на пиксель),
+## bump (крутизна бугров), depth (сила нормалей в Terrain3D), uv (повторов на
+## метр), rough, cellular (угловатые плиты вместо мягких бугров).
+func _texture_asset(asset_name: String, file_key: String, base: Color, opt: Dictionary) -> Terrain3DTextureAsset:
 	var noise := FastNoiseLite.new()
-	noise.seed = seed_value
-	noise.frequency = 0.02
+	noise.seed = opt["seed"]
+	noise.frequency = opt["freq"]
+	noise.fractal_octaves = 4
+	if opt.get("cellular", false):
+		noise.noise_type = FastNoiseLite.TYPE_CELLULAR
+		noise.cellular_return_type = FastNoiseLite.RETURN_DISTANCE2_SUB
+		noise.fractal_octaves = 2
+	var h := _seamless_field(noise)
+	var jitter: float = opt["jitter"]
+	var bump: float = opt["bump"]
 	var alb := Image.create(TEX_SIZE, TEX_SIZE, false, Image.FORMAT_RGBA8)
 	var nrm := Image.create(TEX_SIZE, TEX_SIZE, false, Image.FORMAT_RGBA8)
 	for y in TEX_SIZE:
 		for x in TEX_SIZE:
-			# Бесшовный шум: среднее по четырём сдвинутым копиям.
-			var n := _seamless(noise, x, y)
+			var n := h[y * TEX_SIZE + x]
 			var v := n * jitter
 			alb.set_pixel(x, y, Color(base.r + v, base.g + v, base.b + v * 0.5, 0.5 + n * 0.5))
-			nrm.set_pixel(x, y, Color(0.5, 0.5, 1.0, 0.95))
+			# Наклон по соседям (с переходом через край — текстура бесшовная).
+			var dx := (_h_at(h, x + 1, y) - _h_at(h, x - 1, y)) * 0.5 * bump
+			var dy := (_h_at(h, x, y + 1) - _h_at(h, x, y - 1)) * 0.5 * bump
+			var nv := Vector3(-dx, dy, 1.0).normalized() # OpenGL: зелёный — вверх
+			nrm.set_pixel(x, y, Color(nv.x * 0.5 + 0.5, nv.y * 0.5 + 0.5, nv.z * 0.5 + 0.5, opt["rough"]))
 	alb.generate_mipmaps()
 	nrm.generate_mipmaps()
 	var ta := Terrain3DTextureAsset.new()
 	ta.name = asset_name
 	ta.albedo_texture = _save_texture(alb, file_key + "_albedo")
 	ta.normal_texture = _save_texture(nrm, file_key + "_normal")
-	ta.uv_scale = 0.1
+	ta.uv_scale = opt["uv"]
+	ta.normal_depth = opt["depth"]
 	return ta
 
 
-func _seamless(noise: FastNoiseLite, x: int, y: int) -> float:
+## Шум для крупных пятен оттенка (macro variation): мягкие пятна 0..1.
+func _macro_noise() -> Texture2D:
+	var noise := FastNoiseLite.new()
+	noise.seed = 7
+	noise.frequency = 0.012
+	noise.fractal_octaves = 3
+	var h := _seamless_field(noise)
+	var img := Image.create(TEX_SIZE, TEX_SIZE, false, Image.FORMAT_L8)
+	for y in TEX_SIZE:
+		for x in TEX_SIZE:
+			var v := clampf(h[y * TEX_SIZE + x] * 0.9 + 0.5, 0.0, 1.0)
+			img.set_pixel(x, y, Color(v, v, v))
+	img.generate_mipmaps()
+	return _save_texture(img, "macro_noise")
+
+
+## Шум на квадрат TEX_SIZE, бесшовный: смесь четырёх сдвинутых копий.
+func _seamless_field(noise: FastNoiseLite) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(TEX_SIZE * TEX_SIZE)
 	var s := float(TEX_SIZE)
-	var fx := x / s
-	var fy := y / s
-	var a := noise.get_noise_2d(x, y)
-	var b := noise.get_noise_2d(x - s, y)
-	var c := noise.get_noise_2d(x, y - s)
-	var d := noise.get_noise_2d(x - s, y - s)
-	return lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy)
+	for y in TEX_SIZE:
+		for x in TEX_SIZE:
+			var fx := x / s
+			var fy := y / s
+			var a := noise.get_noise_2d(x, y)
+			var b := noise.get_noise_2d(x - s, y)
+			var c := noise.get_noise_2d(x, y - s)
+			var d := noise.get_noise_2d(x - s, y - s)
+			out[y * TEX_SIZE + x] = lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy)
+	return out
+
+
+func _h_at(h: PackedFloat32Array, x: int, y: int) -> float:
+	return h[posmod(y, TEX_SIZE) * TEX_SIZE + posmod(x, TEX_SIZE)]
 
 
 ## Текстура отдельным файлом: Terrain3D просит не хранить их внутри сцены.
