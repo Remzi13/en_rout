@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CarStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/cars/car_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_speed_kmh = 120.0
+acceleration_mps2 = 7.0
+brake_decel_mps2 = 18.0
+lateral_grip = 8.0
+mass_kg = 1500.0
+body_size = Vector3(1.9, 1.5, 4.5)

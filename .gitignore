@@ -1,0 +1,4 @@
+.godot/
+.idea/
+tests/.logs/
+*.import~
