@@ -188,7 +188,7 @@ func _update_suspension() -> void:
 		if hit.is_empty():
 			_wheel_dist[i] = ray_len
 			continue
-		var surf: int = WorldGen.Surface.GRASS
+		var surf: int = WorldDefs.Surface.GRASS
 		var col: Object = hit.get("collider")
 		if col != null and col.has_meta("surface"):
 			surf = col.get_meta("surface")
@@ -200,7 +200,7 @@ func _update_suspension() -> void:
 			grounded_wheels += 1
 			grip_sum += SURFACE_GRIP[surf]
 			speed_sum += SURFACE_SPEED[surf]
-			if surf != WorldGen.Surface.GRASS:
+			if surf != WorldDefs.Surface.GRASS:
 				road_wheels += 1
 		if compression <= 0.0:
 			continue
@@ -313,7 +313,7 @@ func _apply_stability(_delta: float) -> void:
 
 
 func _check_water(delta: float) -> void:
-	in_water = global_position.y < WorldGen.WATER_LEVEL - 0.4
+	in_water = global_position.y < WorldDefs.WATER_LEVEL - 0.4
 	if in_water:
 		linear_velocity = linear_velocity.lerp(Vector3.ZERO, 1.0 - exp(-2.5 * delta))
 		_water_time += delta

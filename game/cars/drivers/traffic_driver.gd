@@ -4,7 +4,7 @@ extends RefCounted
 ## на узлах выбирает случайное продолжение, держит дистанцию и тормозит
 ## перед препятствием.
 
-var world: WorldGen
+var world: RoadNetwork
 var edge: RoadEdge
 var forward: bool = true ## едем от начала ребра к концу
 var s: float = 0.0 ## позиция вдоль ребра от его начала
@@ -13,7 +13,7 @@ var rng := RandomNumberGenerator.new()
 var stuck_time: float = 0.0
 
 
-func setup(w: WorldGen, e: RoadEdge, fwd: bool, start_s: float, seed_value: int) -> void:
+func setup(w: RoadNetwork, e: RoadEdge, fwd: bool, start_s: float, seed_value: int) -> void:
 	world = w
 	edge = e
 	forward = fwd
@@ -76,10 +76,10 @@ func update_input(car: ArcadeCar, c: ArcadeCar.CarControls, delta: float) -> voi
 
 
 func _next_edge() -> void:
-	var node_cell := edge.b_cell if forward else edge.cell
+	var node := edge.b_node if forward else edge.a_node
 	var options := []
-	for link in world.node_links(node_cell):
-		if link[0] != edge.key():
+	for link in world.links(node):
+		if link[0] != edge.index:
 			options.append(link)
 	if options.is_empty():
 		forward = not forward # тупик — разворот

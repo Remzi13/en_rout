@@ -1,21 +1,19 @@
-class_name WorldGen
 extends RefCounted
-## Детерминированный генератор мира по сиду: рельеф, биомы, дорожная сеть,
-## растительность. Не трогает сцену — только считает данные, поэтому
-## build_chunk_data() можно вызывать из рабочего потока (на каждый поток —
-## свой экземпляр WorldGen).
+## Генератор исходного мира для tools/bake_world.gd (в игре не используется).
+## Считает по сиду рельеф, биомы, дорожную сеть и растительность; запекатель
+## превращает результат в сцены-чанки, которые дальше правятся вручную.
 ##
 ## Дороги: мир разбит на клетки CELL_SIZE, в каждой клетке — узел со
 ## случайным смещением. Узлы соединены рёбрами на восток и на север
 ## (часть рёбер выпадает). Ребро — кривая Безье, высота вдоль неё сглажена
 ## и прибита к высоте узлов, поэтому участки стыкуются через границы чанков.
 
-const CHUNK_SIZE := 256.0
+const CHUNK_SIZE := WorldDefs.CHUNK_SIZE
 const GRID_STEP := 4.0
 const GRID_N := 64 ## клеток рельефа на сторону чанка
-const CELL_SIZE := 480.0
-const CELL_JITTER := 120.0
-const WATER_LEVEL := -4.0
+const CELL_SIZE := 220.0
+const CELL_JITTER := 45.0
+const WATER_LEVEL := WorldDefs.WATER_LEVEL
 const ROAD_MIN_Y := WATER_LEVEL + 1.6
 const ROAD_SAMPLE_M := 4.0
 const ROAD_SHOULDER_M := 1.5
@@ -24,24 +22,45 @@ const ROAD_SINK_M := 0.3 ## рельеф под дорогой ниже поло
 const ROAD_LIFT_M := 0.06 ## полотно над осевой высотой
 const PAD_LIFT_M := 0.03
 const PAD_RADIUS_M := 10.0
-const EDGE_CHANCE := 0.72
+const EDGE_CHANCE := 0.8
 const HIGHWAY_CHANCE := 0.55
-const CURVE_AMOUNT := 0.45
+const CURVE_AMOUNT := 0.35
 const SMOOTH_RADIUS := 10
 const SMOOTH_PASSES := 3
 const VEG_STEP := 7.0
-const ROAD_WIDTHS := [12.0, 7.0]
+const ROAD_WIDTHS := WorldDefs.ROAD_WIDTHS
+const RIM_WIDTH_M := 150.0 ## горы по краю мира
+const RIM_HEIGHT_M := 55.0
 
-enum RoadType { HIGHWAY, DIRT }
-enum Surface { ASPHALT, DIRT, GRASS }
+const RoadType = WorldDefs.RoadType
+
+
+## Участок дороги между узлами сетки (только для генератора).
+class GenEdge:
+	var cell: Vector2i
+	var b_cell: Vector2i
+	var dir: int = 0
+	var type: int = 0
+	var width: float = 12.0
+	var points := PackedVector3Array()
+	var dists := PackedFloat32Array()
+	var length: float = 0.0
+	var bbox := Rect2()
+
+	func key() -> Vector3i:
+		return Vector3i(cell.x, cell.y, dir)
+
 
 var world_seed: int = 0
+## Если не пуст — существуют только эти рёбра (ключи Vector3i).
+var allowed_edges: Dictionary = {}
+## Границы мира: у края рельеф поднимается в горы. Пустой — без краёв.
+var bounds := Rect2()
 
 var _continental: FastNoiseLite
 var _hills: FastNoiseLite
 var _detail: FastNoiseLite
 var _biome: FastNoiseLite
-var _edge_cache: Dictionary = {} ## Vector3i -> RoadEdge (только для основного потока)
 
 
 func _init(seed_value: int = 0) -> void:
@@ -93,7 +112,12 @@ func base_height(x: float, z: float) -> float:
 	var c := _continental.get_noise_2d(x, z)
 	var hw := hills_weight(x, z)
 	var h := _hills.get_noise_2d(x, z)
-	return 4.0 + c * 30.0 + h * (8.0 + 42.0 * hw) + _detail.get_noise_2d(x, z) * 1.2
+	var base := 4.0 + c * 30.0 + h * (8.0 + 42.0 * hw) + _detail.get_noise_2d(x, z) * 1.2
+	if bounds.has_area():
+		var d := minf(minf(x - bounds.position.x, bounds.end.x - x), minf(z - bounds.position.y, bounds.end.y - z))
+		var k := 1.0 - smoothstep(0.0, RIM_WIDTH_M, d)
+		base = lerpf(base, maxf(base, 0.0) + RIM_HEIGHT_M, k * k)
+	return base
 
 
 # --- Дорожная сеть -----------------------------------------------------------
@@ -124,6 +148,8 @@ func node_pos3(cell: Vector2i) -> Vector3:
 
 
 func has_edge(cell: Vector2i, dir: int) -> bool:
+	if not allowed_edges.is_empty():
+		return allowed_edges.has(Vector3i(cell.x, cell.y, dir))
 	if cell == Vector2i.ZERO:
 		return true # у стартового узла всегда есть дороги
 	return rand01(cell.x, cell.y, 10 + dir) < EDGE_CHANCE
@@ -153,19 +179,8 @@ func node_has_roads(cell: Vector2i) -> bool:
 	return not node_links(cell).is_empty()
 
 
-## Ребро по ключу с кэшем (кэш — только для основного потока).
-func get_edge(key: Vector3i) -> RoadEdge:
-	var e: RoadEdge = _edge_cache.get(key)
-	if e == null:
-		e = make_edge(Vector2i(key.x, key.y), key.z)
-		_edge_cache[key] = e
-		if _edge_cache.size() > 400:
-			_edge_cache.erase(_edge_cache.keys()[0])
-	return e
-
-
-func make_edge(cell: Vector2i, dir: int) -> RoadEdge:
-	var e := RoadEdge.new()
+func make_edge(cell: Vector2i, dir: int) -> GenEdge:
+	var e := GenEdge.new()
 	e.cell = cell
 	e.dir = dir
 	e.b_cell = cell + (Vector2i(1, 0) if dir == 0 else Vector2i(0, 1))
@@ -278,22 +293,6 @@ func edge_keys_near(rect: Rect2, margin: float) -> Array[Vector3i]:
 	return out
 
 
-## Ближайшая точка дороги к pos: {edge, s, dist, pos, tangent} или пустой словарь.
-func nearest_road(pos: Vector3, search_m: float = 600.0) -> Dictionary:
-	var rect := Rect2(pos.x - search_m * 0.5, pos.z - search_m * 0.5, search_m, search_m)
-	var best := {}
-	var best_d := INF
-	for key in edge_keys_near(rect, 0.0):
-		var e := get_edge(key)
-		if not e.bbox.grow(search_m * 0.5).has_point(Vector2(pos.x, pos.z)):
-			continue
-		var pr := e.project(pos)
-		if pr.y < best_d:
-			best_d = pr.y
-			best = {"edge": e, "s": pr.x, "dist": pr.y, "pos": e.sample(pr.x), "tangent": e.tangent_at_distance(pr.x)}
-	return best
-
-
 # --- Данные чанка --------------------------------------------------------
 
 ## Считает всё для чанка: сетку рельефа, полотна дорог, площадки
@@ -320,7 +319,7 @@ func build_chunk_data(cc: Vector2i) -> Dictionary:
 
 	var chunk_rect := Rect2(x0, z0, CHUNK_SIZE, CHUNK_SIZE)
 	var margin := ROAD_BLEND_M + 12.0
-	var edges: Array[RoadEdge] = []
+	var edges: Array[GenEdge] = []
 	for key in edge_keys_near(chunk_rect, margin):
 		var e := make_edge(Vector2i(key.x, key.y), key.z)
 		if e.bbox.grow(margin).intersects(chunk_rect):
@@ -392,6 +391,7 @@ func build_chunk_data(cc: Vector2i) -> Dictionary:
 					road_y[idx] = nh - ROAD_SINK_M
 		if chunk_rect.has_point(np):
 			pads.append({
+				"cell": cell,
 				"pos": Vector3(np.x - x0, nh + PAD_LIFT_M, np.y - z0),
 				"highway": types.has(RoadType.HIGHWAY),
 			})
@@ -402,7 +402,7 @@ func build_chunk_data(cc: Vector2i) -> Dictionary:
 
 	var data := {"coord": cc, "origin": Vector3(x0, 0.0, z0), "pads": pads}
 	_build_terrain_arrays(data, hgt, edge_dist, w, x0, z0)
-	data["roads"] = _build_road_arrays(edges, chunk_rect, x0, z0)
+	data["edges"] = edges
 	data["vegetation"] = _build_vegetation(cc, hgt, edge_dist, w, x0, z0)
 	return data
 
@@ -462,65 +462,6 @@ func _build_terrain_arrays(data: Dictionary, hgt: PackedFloat32Array, edge_dist:
 				k += 1
 	data["terrain"] = {"vertices": verts, "normals": normals, "colors": colors, "indices": indices, "faces": faces}
 	data["water"] = min_h < WATER_LEVEL + 0.5
-
-
-func _build_road_arrays(edges: Array[RoadEdge], rect: Rect2, x0: float, z0: float) -> Dictionary:
-	var out := {}
-	for road_type in [RoadType.HIGHWAY, RoadType.DIRT]:
-		out[road_type] = {
-			"vertices": PackedVector3Array(), "normals": PackedVector3Array(),
-			"uvs": PackedVector2Array(), "indices": PackedInt32Array(), "faces": PackedVector3Array(),
-		}
-	var origin := Vector3(x0, 0.0, z0)
-	var lift := Vector3(0.0, ROAD_LIFT_M, 0.0)
-	var skirt := Vector3(0.0, -0.8, 0.0)
-	for e in edges:
-		var arr: Dictionary = out[e.type]
-		var verts: PackedVector3Array = arr["vertices"]
-		var normals: PackedVector3Array = arr["normals"]
-		var uvs: PackedVector2Array = arr["uvs"]
-		var indices: PackedInt32Array = arr["indices"]
-		var faces: PackedVector3Array = arr["faces"]
-		var hw := e.width * 0.5
-		for k in e.points.size() - 1:
-			var p0 := e.points[k]
-			var p1 := e.points[k + 1]
-			var mid := (p0 + p1) * 0.5
-			if not rect.has_point(Vector2(mid.x, mid.z)):
-				continue
-			var t0 := e.tangent_at(k)
-			var t1 := e.tangent_at(k + 1)
-			var r0 := Vector3(-t0.z, 0.0, t0.x) * hw
-			var r1 := Vector3(-t1.z, 0.0, t1.x) * hw
-			var l0 := p0 - r0 - origin + lift
-			var rr0 := p0 + r0 - origin + lift
-			var l1 := p1 - r1 - origin + lift
-			var rr1 := p1 + r1 - origin + lift
-			var nrm := (l1 - l0).cross(rr0 - l0).normalized()
-			if nrm.y < 0.0:
-				nrm = -nrm
-			var v0 := e.dists[k] / 10.0
-			var v1 := e.dists[k + 1] / 10.0
-			var base := verts.size()
-			verts.append_array([l0, rr0, l1, rr1])
-			normals.append_array([nrm, nrm, nrm, nrm])
-			uvs.append_array([Vector2(0, v0), Vector2(1, v0), Vector2(0, v1), Vector2(1, v1)])
-			indices.append_array([base, base + 2, base + 1, base + 1, base + 2, base + 3])
-			faces.append_array([l0, l1, rr0, rr0, l1, rr1])
-			# Боковые «юбки» закрывают щель между полотном и рельефом.
-			var sb := verts.size()
-			var ln := -r0.normalized()
-			verts.append_array([l0, l1, l0 + skirt, l1 + skirt])
-			normals.append_array([ln, ln, ln, ln])
-			uvs.append_array([Vector2(0, v0), Vector2(0, v1), Vector2(0, v0), Vector2(0, v1)])
-			indices.append_array([sb, sb + 2, sb + 1, sb + 1, sb + 2, sb + 3])
-			var rb := verts.size()
-			var rn := r0.normalized()
-			verts.append_array([rr0, rr1, rr0 + skirt, rr1 + skirt])
-			normals.append_array([rn, rn, rn, rn])
-			uvs.append_array([Vector2(1, v0), Vector2(1, v1), Vector2(1, v0), Vector2(1, v1)])
-			indices.append_array([rb, rb + 1, rb + 2, rb + 1, rb + 3, rb + 2])
-	return out
 
 
 ## Высота рельефа в локальной точке чанка (билинейно по сетке).

@@ -178,14 +178,14 @@ func _show_settings(on_close: Callable) -> void:
 
 func _start_game(seed_value: int) -> void:
 	_clear_screen()
-	_loading = UiTheme.label("Генерация мира…  сид %d" % seed_value, 36)
+	_loading = UiTheme.label("Загрузка мира…  сид %d" % seed_value, 36)
 	UiTheme.anchor(_loading, Control.PRESET_CENTER, Rect2(-400, -30, 800, 60))
 	_loading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var bg := _backdrop()
 	bg.add_child(_loading)
 	_ui.add_child(bg)
 	_screen = bg
-	# Дать кадру отрисовать экран загрузки до тяжёлой генерации.
+	# Дать кадру отрисовать экран загрузки до загрузки мира.
 	await get_tree().process_frame
 	await get_tree().process_frame
 	world = OpenWorld.create(seed_value)
@@ -198,8 +198,8 @@ func _start_game(seed_value: int) -> void:
 	var args := OS.get_cmdline_user_args()
 	if "--autopilot" in args:
 		var auto := TrafficDriver.new()
-		var near := world.gen.nearest_road(world.player.global_position)
-		auto.setup(world.gen, near["edge"], true, near["s"], 1)
+		var near := world.roads.nearest_road(world.player.global_position)
+		auto.setup(world.roads, near["edge"], true, near["s"], 1)
 		auto.cruise_kmh = 120.0
 		world.player.driver = auto
 	if "--chase" in args:

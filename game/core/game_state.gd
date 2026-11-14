@@ -18,7 +18,7 @@ var master_volume: float = 0.8
 var music_volume: float = 0.6
 var sfx_volume: float = 0.8
 var quality: int = 1 ## 0 — низкое, 1 — среднее, 2 — высокое
-var draw_distance: int = 2 ## радиус загрузки в чанках (1..4)
+var draw_distance: int = 2 ## дальность прорисовки 1..4 (камера видит на 300 + 300·N м)
 var key_overrides: Dictionary = {} ## действие -> physical_keycode
 
 # --- Сохранение ---

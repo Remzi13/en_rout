@@ -1,12 +1,12 @@
 class_name RoadEdge
 extends RefCounted
-## Один участок дороги между двумя узлами сетки (WorldGen). Точки идут от узла
-## `cell` к узлу `b_cell` с шагом ~WorldGen.ROAD_SAMPLE_M, высота уже сглажена.
+## Один участок дорожной сети (из одного RoadPath) между узлами a_node и
+## b_node. Точки в глобальных координатах с шагом ~RoadPath.SAMPLE_M.
 
-var cell: Vector2i
-var b_cell: Vector2i
-var dir: int = 0 ## 0 — на восток (+X), 1 — на «север» (+Z)
-var type: int = 0 ## WorldGen.RoadType
+var index: int = -1
+var a_node: int = -1
+var b_node: int = -1
+var type: int = 0 ## WorldDefs.RoadType
 var width: float = 12.0
 var points: PackedVector3Array = PackedVector3Array()
 var dists: PackedFloat32Array = PackedFloat32Array() ## накопленная длина до точки
@@ -14,12 +14,36 @@ var length: float = 0.0
 var bbox: Rect2 = Rect2() ## в плоскости XZ, с учётом ширины
 
 
-func key() -> Vector3i:
-	return Vector3i(cell.x, cell.y, dir)
+static func from_points(pts: PackedVector3Array, road_type: int) -> RoadEdge:
+	var e := RoadEdge.new()
+	e.type = road_type
+	e.width = WorldDefs.ROAD_WIDTHS[road_type]
+	e.points = pts
+	var acc := 0.0
+	var minx := INF
+	var minz := INF
+	var maxx := -INF
+	var maxz := -INF
+	for k in pts.size():
+		if k > 0:
+			acc += pts[k].distance_to(pts[k - 1])
+		e.dists.append(acc)
+		minx = minf(minx, pts[k].x)
+		minz = minf(minz, pts[k].z)
+		maxx = maxf(maxx, pts[k].x)
+		maxz = maxf(maxz, pts[k].z)
+	e.length = acc
+	var pad := e.width * 0.5
+	e.bbox = Rect2(minx - pad, minz - pad, maxx - minx + pad * 2.0, maxz - minz + pad * 2.0)
+	return e
+
+
+func key() -> int:
+	return index
 
 
 func is_highway() -> bool:
-	return type == WorldGen.RoadType.HIGHWAY
+	return type == WorldDefs.RoadType.HIGHWAY
 
 
 ## Направление дороги в точке i (в плоскости XZ, нормализовано).

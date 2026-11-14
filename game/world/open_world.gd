@@ -1,19 +1,20 @@
 class_name OpenWorld
 extends Node3D
-## Игровая сессия в открытом мире: окружение и свет, стриминг чанков,
-## машина игрока, камера, трафик, погони, сутки и погода, HUD.
-## Создаётся из main.gd через OpenWorld.create(seed).
+## Игровая сессия в открытом мире: окружение и свет, мир из сцен-чанков
+## (game/world/world.tscn), машина игрока, камера, трафик, погони, сутки и
+## погода, HUD. Создаётся из main.gd через OpenWorld.create(seed);
+## сид влияет на трафик, погони и погоду, сам мир — фиксированный.
 
 signal ready_to_play
 signal pause_requested
 
 const PLAYER_STATS := preload("res://game/cars/stats/player.tres")
-const INITIAL_RADIUS := 1
+const WORLD_SCENE := "res://game/world/world.tscn"
 
 var world_seed: int = 0
-var gen: WorldGen
 var materials: WorldMaterials
-var chunks: ChunkManager
+var map: WorldMap
+var roads: RoadNetwork
 var player: ArcadeCar
 var camera: FollowCamera
 var traffic: TrafficManager
@@ -41,18 +42,13 @@ static func create(seed_value: int) -> OpenWorld:
 func _ready() -> void:
 	GameState.world_seed = world_seed
 	GameState.weather_grip = 1.0
-	gen = WorldGen.new(world_seed)
-	materials = WorldMaterials.new()
+	materials = WorldMaterials.shared()
 	_build_environment()
 
-	chunks = ChunkManager.new()
-	chunks.name = "Chunks"
-	chunks.setup(world_seed, materials)
-	chunks.load_radius = GameState.draw_distance
-	add_child(chunks)
-
-	var spawn := _start_transform()
-	chunks.generate_now(spawn.origin, INITIAL_RADIUS)
+	map = (load(WORLD_SCENE) as PackedScene).instantiate() as WorldMap
+	add_child(map)
+	roads = RoadNetwork.build(map)
+	var spawn := map.start_transform()
 
 	player = ArcadeCar.new()
 	player.name = "Player"
@@ -64,7 +60,6 @@ func _ready() -> void:
 	add_child(player)
 	player.place(spawn)
 	_last_pos = player.global_position
-	chunks.focus = player
 
 	camera = FollowCamera.new()
 	camera.name = "Camera"
@@ -154,18 +149,8 @@ func apply_quality() -> void:
 	env.sdfgi_enabled = false
 	get_viewport().msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][q]
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if q >= 1 else Viewport.SCREEN_SPACE_AA_FXAA
-	chunks.load_radius = GameState.draw_distance
 	camera.far = 300.0 + GameState.draw_distance * 300.0
 	traffic.max_cars = [6, 12, 16][q]
-
-
-func _start_transform() -> Transform3D:
-	var e := gen.get_edge(Vector3i(0, 0, 0))
-	var s := minf(60.0, e.length * 0.3)
-	var p := e.sample(s)
-	var t := e.tangent_at_distance(s)
-	var right := Vector3(-t.z, 0, t.x)
-	return Transform3D(Basis.looking_at(t, Vector3.UP), p + right * 2.6 + Vector3.UP * 1.2)
 
 
 func _physics_process(delta: float) -> void:
@@ -191,7 +176,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Ставит игрока на ближайшую дорогу по направлению движения.
 func respawn_player() -> void:
 	_respawn_cooldown = 2.0
-	var near := gen.nearest_road(player.global_position)
+	var near := roads.nearest_road(player.global_position)
 	if near.is_empty():
 		var p := player.global_position
 		p.y = ground_height(p, p.y) + 2.0
@@ -208,7 +193,7 @@ func respawn_player() -> void:
 	camera.snap()
 
 
-## Высота поверхности (лучом сверху); fallback — если чанк не загружен.
+## Высота поверхности (лучом сверху); fallback — если под точкой ничего нет.
 func ground_height(pos: Vector3, fallback: float) -> float:
 	var from := Vector3(pos.x, 400.0, pos.z)
 	var q := PhysicsRayQueryParameters3D.create(from, Vector3(pos.x, -100.0, pos.z), ArcadeCar.LAYER_WORLD)
@@ -224,15 +209,15 @@ func ground_height(pos: Vector3, fallback: float) -> float:
 func find_road_spawn(center: Vector3, min_d: float, max_d: float, rng: RandomNumberGenerator,
 		need_loaded: bool = true, prefer_dir: Vector3 = Vector3.ZERO) -> Dictionary:
 	var rect := Rect2(center.x - max_d, center.z - max_d, max_d * 2.0, max_d * 2.0)
-	var keys := gen.edge_keys_near(rect, 0.0)
-	if keys.is_empty():
+	var near_edges := roads.edges_near(rect)
+	if near_edges.is_empty():
 		return {}
 	var dir := prefer_dir
 	dir.y = 0.0
 	if dir.length_squared() > 0.0:
 		dir = dir.normalized()
 	for attempt in 30:
-		var e := gen.get_edge(keys[rng.randi() % keys.size()])
+		var e := near_edges[rng.randi() % near_edges.size()]
 		if not e.bbox.grow(max_d).has_point(Vector2(center.x, center.z)):
 			continue
 		var s := rng.randf_range(10.0, maxf(e.length - 10.0, 10.0))
@@ -244,7 +229,7 @@ func find_road_spawn(center: Vector3, min_d: float, max_d: float, rng: RandomNum
 			continue
 		if dir != Vector3.ZERO and to.normalized().dot(dir) < 0.3:
 			continue
-		if need_loaded and not chunks.is_loaded_at(p):
+		if need_loaded and not map.contains(p):
 			continue
 		return {"pos": p, "edge": e, "s": s, "forward": rng.randf() < 0.5}
 	return {}
@@ -258,10 +243,10 @@ func find_ground_spawn(center: Vector3, min_d: float, max_d: float, rng: RandomN
 		var ang := base_ang + rng.randf_range(-0.8, 0.8)
 		var d := rng.randf_range(min_d, max_d)
 		var p := center + Vector3(sin(ang), 0.0, cos(ang)) * d
-		if not chunks.is_loaded_at(p):
+		if not map.contains(p):
 			continue
 		p.y = ground_height(p, -1000.0)
-		if p.y < WorldGen.WATER_LEVEL + 0.5:
+		if p.y < WorldDefs.WATER_LEVEL + 0.5:
 			continue
 		return {"pos": p}
 	return {}

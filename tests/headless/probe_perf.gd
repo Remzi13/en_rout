@@ -20,8 +20,8 @@ func _run() -> void:
 	for phase in ["idle", "drive"]:
 		if phase == "drive":
 			var auto = TrafficDriverScript.new()
-			var near = w.gen.nearest_road(w.player.global_position)
-			auto.setup(w.gen, near["edge"], true, near["s"], 1)
+			var near = w.roads.nearest_road(w.player.global_position)
+			auto.setup(w.roads, near["edge"], true, near["s"], 1)
 			auto.cruise_kmh = 110.0
 			w.player.driver = auto
 		var worst := 0
@@ -32,6 +32,6 @@ func _run() -> void:
 			var now := Time.get_ticks_usec()
 			worst = maxi(worst, now - last)
 			last = now
-		print("%s: среднее %.1f мс/кадр, худший %.1f мс, чанков %d, в очереди %d, трафик %d" % [phase,
-			(Time.get_ticks_usec() - t) / 240000.0, worst / 1000.0, w.chunks.loaded_count(), w.chunks.pending_count(), w.traffic.cars.size()])
+		print("%s: среднее %.1f мс/кадр, худший %.1f мс, трафик %d" % [phase,
+			(Time.get_ticks_usec() - t) / 240000.0, worst / 1000.0, w.traffic.cars.size()])
 	quit()

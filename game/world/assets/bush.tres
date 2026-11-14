@@ -1,0 +1,13 @@
+[gd_resource type="SphereMesh" format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2b13k"]
+vertex_color_use_as_albedo = true
+albedo_color = Color(0.25, 0.4, 0.16, 1)
+roughness = 0.9
+
+[resource]
+material = SubResource("StandardMaterial3D_2b13k")
+radius = 0.9
+height = 1.1
+radial_segments = 8
+rings = 4

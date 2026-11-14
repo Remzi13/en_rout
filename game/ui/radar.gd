@@ -9,21 +9,18 @@ extends Control
 var world: OpenWorld
 var _edges: Array[RoadEdge] = []
 var _refresh: float = 0.0
-var _last_cell := Vector2i(999999, 999999)
+var _last_pos := Vector3(INF, 0.0, INF)
 
 
 func _process(delta: float) -> void:
 	_refresh -= delta
 	if world != null and world.player != null:
-		var cell := WorldGen.cell_of(world.player.global_position)
-		if cell != _last_cell or _refresh <= 0.0:
-			_last_cell = cell
+		var p := world.player.global_position
+		if p.distance_to(_last_pos) > 100.0 or _refresh <= 0.0:
+			_last_pos = p
 			_refresh = 2.0
-			_edges.clear()
-			var p := world.player.global_position
 			var rect := Rect2(p.x - range_m, p.z - range_m, range_m * 2.0, range_m * 2.0)
-			for key in world.gen.edge_keys_near(rect, 100.0):
-				_edges.append(world.gen.get_edge(key))
+			_edges = world.roads.edges_near(rect.grow(100.0))
 	queue_redraw()
 
 

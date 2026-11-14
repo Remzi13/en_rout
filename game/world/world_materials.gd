@@ -1,9 +1,13 @@
+@tool
 class_name WorldMaterials
 extends RefCounted
-## Общие материалы, текстуры и меши-заглушки мира. Создаются один раз
-## на основном потоке и разделяются всеми чанками. Меши деревьев, камней и
-## кустов — заглушки из примитивов; чтобы подставить CC0-модели, достаточно
-## заменить соответствующий меш здесь (логика чанков их не знает).
+## Общие материалы и меши мира. Лежат файлами в game/world/assets/ (их
+## создаёт tools/bake_world.gd, править можно в редакторе). Загружаются
+## один раз и разделяются всеми чанками; погода меняет их на лету.
+
+const DIR := "res://game/world/assets/"
+
+static var _shared: WorldMaterials
 
 var terrain: StandardMaterial3D
 var highway: StandardMaterial3D
@@ -11,51 +15,32 @@ var asphalt_plain: StandardMaterial3D
 var dirt_road: StandardMaterial3D
 var water: StandardMaterial3D
 
-var conifer_mesh: ArrayMesh
-var leafy_mesh: ArrayMesh
-var rock_mesh: Mesh
-var bush_mesh: Mesh
-var water_mesh: PlaneMesh
-
 var _road_mats: Array[StandardMaterial3D] = []
+var _dry_roughness: Dictionary = {}
 var _shape_cache: Dictionary = {}
 
 
+static func shared() -> WorldMaterials:
+	if _shared == null:
+		_shared = WorldMaterials.new()
+	return _shared
+
+
 func _init() -> void:
-	terrain = StandardMaterial3D.new()
-	terrain.vertex_color_use_as_albedo = true
-	terrain.vertex_color_is_srgb = true
-	terrain.albedo_texture = _noise_texture(256, 0.08, 0.72, 1.0, 11)
-	terrain.uv1_triplanar = true
-	terrain.uv1_scale = Vector3(0.15, 0.15, 0.15)
-	terrain.roughness = 0.95
-	terrain.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-
-	highway = _road_material(_asphalt_image(true))
-	asphalt_plain = _road_material(_asphalt_image(false))
-	asphalt_plain.uv1_triplanar = true
-	asphalt_plain.uv1_scale = Vector3(0.1, 0.1, 0.1)
-	dirt_road = _road_material(_dirt_image())
-	dirt_road.roughness = 1.0
-
-	water = StandardMaterial3D.new()
-	water.albedo_color = Color(0.12, 0.26, 0.32, 0.82)
-	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	water.metallic = 0.3
-	water.roughness = 0.08
-	water.metallic_specular = 0.9
-	water_mesh = PlaneMesh.new()
-	water_mesh.size = Vector2(WorldGen.CHUNK_SIZE, WorldGen.CHUNK_SIZE)
-	water_mesh.center_offset = Vector3(WorldGen.CHUNK_SIZE * 0.5, 0.0, WorldGen.CHUNK_SIZE * 0.5)
-	water_mesh.material = water
-
-	_build_vegetation_meshes()
+	terrain = load(DIR + "terrain.res")
+	highway = load(DIR + "highway.res")
+	asphalt_plain = load(DIR + "asphalt_plain.res")
+	dirt_road = load(DIR + "dirt_road.res")
+	water = load(DIR + "water.tres")
+	_road_mats = [highway, asphalt_plain, dirt_road]
+	for m in _road_mats:
+		_dry_roughness[m] = m.roughness
 
 
 ## Мокрая дорога: темнее и глаже (0 — сухо, 1 — ливень).
 func set_wetness(k: float) -> void:
 	for m in _road_mats:
-		m.roughness = lerpf(m.get_meta("dry_roughness", 0.9), 0.28, k)
+		m.roughness = lerpf(_dry_roughness[m], 0.28, k)
 		m.albedo_color = Color.WHITE.lerp(Color(0.62, 0.62, 0.66), k)
 	terrain.albedo_color = Color.WHITE.lerp(Color(0.78, 0.8, 0.78), k)
 
@@ -71,153 +56,29 @@ func cylinder_shape(radius: float, height: float) -> RID:
 	return (_shape_cache[key] as Shape3D).get_rid()
 
 
-func _road_material(img: Image) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	img.generate_mipmaps()
-	m.albedo_texture = ImageTexture.create_from_image(img)
-	m.roughness = 0.9
-	m.set_meta("dry_roughness", 0.9)
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_road_mats.append(m)
-	return m
-
-
-func _asphalt_image(markings: bool) -> Image:
-	const W := 128
-	const H := 256
-	var img := Image.create(W, H, false, Image.FORMAT_RGB8)
-	var noise := FastNoiseLite.new()
-	noise.frequency = 0.15
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 5
-	for y in H:
-		for x in W:
-			var g := 0.2 + noise.get_noise_2d(x, y) * 0.03 + rng.randf() * 0.05
-			var c := Color(g, g, g * 1.04)
-			if markings:
-				var u := float(x) / W
-				var v := float(y) / H
-				if (u > 0.035 and u < 0.06) or (u > 0.94 and u < 0.965):
-					c = Color(0.82, 0.82, 0.8)
-				elif absf(u - 0.5) < 0.012 and v < 0.4:
-					c = Color(0.85, 0.72, 0.25)
-			img.set_pixel(x, y, c)
-	return img
-
-
-func _dirt_image() -> Image:
-	const W := 128
-	const H := 256
-	var img := Image.create(W, H, false, Image.FORMAT_RGB8)
-	var noise := FastNoiseLite.new()
-	noise.frequency = 0.08
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 9
-	for y in H:
-		for x in W:
-			var u := float(x) / W
-			var g := 0.5 + noise.get_noise_2d(x, y) * 0.15 + rng.randf() * 0.08
-			var track := 1.0 - 0.18 * (exp(-pow((u - 0.3) / 0.06, 2.0)) + exp(-pow((u - 0.7) / 0.06, 2.0)))
-			var edge := smoothstep(0.0, 0.12, u) * smoothstep(1.0, 0.88, u)
-			var dirt := Color(0.47, 0.38, 0.27) * g * track * 1.6
-			var grass := Color(0.32, 0.38, 0.2) * g * 1.5
-			img.set_pixel(x, y, grass.lerp(dirt, edge))
-	return img
-
-
-func _noise_texture(size: int, freq: float, lo: float, hi: float, s: int) -> ImageTexture:
-	var img := Image.create(size, size, false, Image.FORMAT_RGB8)
-	var noise := FastNoiseLite.new()
-	noise.seed = s
-	noise.frequency = freq
-	noise.fractal_octaves = 4
-	var rng := RandomNumberGenerator.new()
-	rng.seed = s
-	for y in size:
-		for x in size:
-			# Тайлится за счёт 4D-тора? Достаточно плавного шума + зерна.
-			var v := lerpf(lo, hi, clampf(noise.get_noise_2d(x, y) * 0.5 + 0.5 + rng.randf() * 0.1, 0.0, 1.0))
-			img.set_pixel(x, y, Color(v, v, v))
-	img.generate_mipmaps()
-	return ImageTexture.create_from_image(img)
-
-
-func _mat(color: Color, roughness: float = 0.9, instance_tint: bool = false) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
-	m.roughness = roughness
-	m.vertex_color_use_as_albedo = instance_tint
-	return m
-
-
-func _build_vegetation_meshes() -> void:
-	var bark := _mat(Color(0.30, 0.22, 0.15))
-	var needles := _mat(Color(0.16, 0.30, 0.16), 0.85, true)
-	var leaves := _mat(Color(0.28, 0.45, 0.18), 0.8, true)
-
-	var trunk := CylinderMesh.new()
-	trunk.top_radius = 0.18
-	trunk.bottom_radius = 0.3
-	trunk.height = 2.4
-	trunk.radial_segments = 7
-	trunk.rings = 1
-
-	# Ёлка: ствол + три конуса.
-	conifer_mesh = ArrayMesh.new()
-	_append(conifer_mesh, [[trunk, Transform3D(Basis(), Vector3(0, 1.2, 0))]], bark)
-	var cones := []
-	for k in 3:
-		var cone := CylinderMesh.new()
-		cone.top_radius = 0.0
-		cone.bottom_radius = 2.2 - k * 0.55
-		cone.height = 3.2 - k * 0.4
-		cone.radial_segments = 9
-		cone.rings = 1
-		cones.append([cone, Transform3D(Basis(), Vector3(0, 3.0 + k * 1.8, 0))])
-	_append(conifer_mesh, cones, needles)
-
-	# Лиственное: ствол + несколько сфер кроны.
-	leafy_mesh = ArrayMesh.new()
-	var tall_trunk := trunk.duplicate() as CylinderMesh
-	tall_trunk.height = 3.4
-	_append(leafy_mesh, [[tall_trunk, Transform3D(Basis(), Vector3(0, 1.7, 0))]], bark)
-	var crowns := []
-	var offsets := [Vector3(0, 4.6, 0), Vector3(1.0, 4.0, 0.3), Vector3(-0.8, 4.2, -0.6), Vector3(0.2, 5.4, 0.5)]
-	for k in offsets.size():
-		var s := SphereMesh.new()
-		s.radius = 1.7 - k * 0.2
-		s.height = s.radius * 1.8
-		s.radial_segments = 10
-		s.rings = 6
-		crowns.append([s, Transform3D(Basis(), offsets[k])])
-	_append(leafy_mesh, crowns, leaves)
-
-	var rock := SphereMesh.new()
-	rock.radius = 1.0
-	rock.height = 1.6
-	rock.radial_segments = 7
-	rock.rings = 4
-	rock.material = _mat(Color(0.47, 0.45, 0.42), 0.95, true)
-	rock_mesh = rock
-
-	var bush := SphereMesh.new()
-	bush.radius = 0.9
-	bush.height = 1.1
-	bush.radial_segments = 8
-	bush.rings = 4
-	bush.material = _mat(Color(0.25, 0.40, 0.16), 0.9, true)
-	bush_mesh = bush
-
-
-## Склеивает примитивы с трансформами в одну поверхность меша.
-func _append(target: ArrayMesh, parts: Array, material: Material) -> void:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for part in parts:
-		var prim: PrimitiveMesh = part[0]
-		var arr_mesh := ArrayMesh.new()
-		arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, prim.get_mesh_arrays())
-		st.append_from(arr_mesh, 0, part[1])
-	st.commit(target)
-	target.surface_set_material(target.get_surface_count() - 1, material)
+## Меш + статическое тело с метаданными поверхности для физики машины.
+## Узлы без owner — в сцену не сохраняются, строятся заново при загрузке.
+static func build_static(verts: PackedVector3Array, normals: PackedVector3Array, uvs: PackedVector2Array,
+		indices: PackedInt32Array, faces: PackedVector3Array, mat: Material, surface: int) -> Array[Node]:
+	var a := []
+	a.resize(Mesh.ARRAY_MAX)
+	a[Mesh.ARRAY_VERTEX] = verts
+	a[Mesh.ARRAY_NORMAL] = normals
+	a[Mesh.ARRAY_TEX_UV] = uvs
+	a[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+	mesh.surface_set_material(0, mat)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	var body := StaticBody3D.new()
+	body.collision_layer = WorldDefs.LAYER_WORLD
+	body.collision_mask = 0
+	body.set_meta("surface", surface)
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(faces)
+	shape.backface_collision = true
+	var cs := CollisionShape3D.new()
+	cs.shape = shape
+	body.add_child(cs)
+	return [mi, body]

@@ -135,7 +135,7 @@ func _tick_chase(delta: float) -> void:
 	var p := world.player
 	# Гонщики за пределами загруженного мира потерялись.
 	for car: ArcadeCar in pursuers.duplicate():
-		if not is_instance_valid(car) or not world.chunks.is_loaded_at(car.global_position):
+		if not is_instance_valid(car) or not world.map.contains(car.global_position):
 			_drop_pursuer(car)
 	score.tick(delta, p.get_speed_kmh(), p.drifting)
 	var outcome := rules.update(delta, min_pursuer_distance(), p.get_speed_kmh())
@@ -174,7 +174,7 @@ func _update_leaving() -> void:
 			continue
 		var d := car.global_position.distance_to(world.player.global_position)
 		var seen := world.camera != null and world.camera.is_position_in_frustum(car.global_position)
-		if d > 250.0 or (d > 80.0 and not seen) or not world.chunks.is_loaded_at(car.global_position):
+		if d > 250.0 or (d > 80.0 and not seen) or not world.map.contains(car.global_position):
 			_leaving.erase(car)
 			car.queue_free()
 

@@ -1,7 +1,7 @@
 class_name TrafficManager
 extends Node3D
 ## Гражданский трафик: держит до max_cars машин на дорогах вокруг игрока.
-## Появляются вне поля зрения на загруженных чанках, исчезают далеко
+## Появляются вне поля зрения на дорогах мира, исчезают далеко
 ## позади или если застряли. Сообщает об опасных пролётах игрока мимо них.
 
 signal near_miss(car: ArcadeCar)
@@ -40,8 +40,8 @@ func _physics_process(delta: float) -> void:
 		var d := car.global_position.distance_to(ppos)
 		var drv := car.driver as TrafficDriver
 		var stuck := drv != null and drv.stuck_time > 8.0 and d > 60.0
-		if d > despawn_m or stuck or car.global_position.y < WorldGen.WATER_LEVEL - 20.0 \
-				or not world.chunks.is_loaded_at(car.global_position):
+		if d > despawn_m or stuck or car.global_position.y < WorldDefs.WATER_LEVEL - 20.0 \
+				or not world.map.contains(car.global_position):
 			_remove(car)
 			continue
 		_check_near_miss(car, player, d)
@@ -94,7 +94,7 @@ func _try_spawn() -> void:
 	car.name = "Traffic%d" % _counter
 	_counter += 1
 	var drv := TrafficDriver.new()
-	drv.setup(world.gen, spot["edge"], spot["forward"], spot["s"], rng.randi())
+	drv.setup(world.roads, spot["edge"], spot["forward"], spot["s"], rng.randi())
 	car.driver = drv
 	car.auto_respawn = false
 	add_child(car)

@@ -1,0 +1,8 @@
+[gd_resource type="PlaneMesh" format=3]
+
+[ext_resource type="Material" path="res://game/world/assets/water.tres" id="1_dq3v5"]
+
+[resource]
+material = ExtResource("1_dq3v5")
+size = Vector2(256, 256)
+center_offset = Vector3(128, 0, 128)
