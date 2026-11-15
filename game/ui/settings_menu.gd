@@ -30,7 +30,7 @@ func _ready() -> void:
 		func(i: int) -> void: GameState.draw_distance = i + 1)
 
 	v.add_child(UiTheme.label("Управление (клавиатура)", 24))
-	for pair in _actions():
+	for pair in GameState.REBINDABLE_ACTIONS:
 		var row := HBoxContainer.new()
 		var l := UiTheme.label(pair[1], 20)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -49,11 +49,6 @@ func _ready() -> void:
 	v.add_child(reset)
 	v.add_child(UiTheme.button("Назад", _close))
 	_refresh_keys()
-
-
-## Действия для переназначения (список в GameState).
-static func _actions() -> Array:
-	return GameState.REBINDABLE_ACTIONS
 
 
 func focus_first() -> void:
