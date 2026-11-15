@@ -78,218 +78,218 @@ size = Vector3(2088, 400, 20)
 [sub_resource type="BoxShape3D" id="BoxShape3D_dtt4n"]
 size = Vector3(2088, 400, 20)
 
-[node name="World" type="Node3D" unique_id=2044020639]
+[node name="World" type="Node3D" unique_id=305874896]
 script = ExtResource("1_ujhku")
 
-[node name="Chunk_-4_-4" parent="." unique_id=1887470026 instance=ExtResource("2_pr7v2")]
+[node name="Chunk_-4_-4" parent="." unique_id=18413980 instance=ExtResource("2_pr7v2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -1024)
 
-[node name="Chunk_-3_-4" parent="." unique_id=1868244781 instance=ExtResource("3_rgh04")]
+[node name="Chunk_-3_-4" parent="." unique_id=1868080510 instance=ExtResource("3_rgh04")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -1024)
 
-[node name="Chunk_-2_-4" parent="." unique_id=616420323 instance=ExtResource("4_0bvwu")]
+[node name="Chunk_-2_-4" parent="." unique_id=1868821346 instance=ExtResource("4_0bvwu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -1024)
 
-[node name="Chunk_-1_-4" parent="." unique_id=482759561 instance=ExtResource("5_ouhaa")]
+[node name="Chunk_-1_-4" parent="." unique_id=2126918600 instance=ExtResource("5_ouhaa")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -1024)
 
-[node name="Chunk_0_-4" parent="." unique_id=206477397 instance=ExtResource("6_qgk5l")]
+[node name="Chunk_0_-4" parent="." unique_id=266268388 instance=ExtResource("6_qgk5l")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1024)
 
-[node name="Chunk_1_-4" parent="." unique_id=1661089152 instance=ExtResource("7_wuqp4")]
+[node name="Chunk_1_-4" parent="." unique_id=1128761114 instance=ExtResource("7_wuqp4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -1024)
 
-[node name="Chunk_2_-4" parent="." unique_id=1305257436 instance=ExtResource("8_3bhyg")]
+[node name="Chunk_2_-4" parent="." unique_id=668984375 instance=ExtResource("8_3bhyg")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -1024)
 
-[node name="Chunk_3_-4" parent="." unique_id=1241397304 instance=ExtResource("9_hp72q")]
+[node name="Chunk_3_-4" parent="." unique_id=1766383536 instance=ExtResource("9_hp72q")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -1024)
 
-[node name="Chunk_-4_-3" parent="." unique_id=748781555 instance=ExtResource("10_34xw7")]
+[node name="Chunk_-4_-3" parent="." unique_id=1208251327 instance=ExtResource("10_34xw7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -768)
 
-[node name="Chunk_-3_-3" parent="." unique_id=1590805916 instance=ExtResource("11_0o6mq")]
+[node name="Chunk_-3_-3" parent="." unique_id=6155539 instance=ExtResource("11_0o6mq")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -768)
 
-[node name="Chunk_-2_-3" parent="." unique_id=511604926 instance=ExtResource("12_wby1f")]
+[node name="Chunk_-2_-3" parent="." unique_id=545481249 instance=ExtResource("12_wby1f")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -768)
 
-[node name="Chunk_-1_-3" parent="." unique_id=969948616 instance=ExtResource("13_eetxa")]
+[node name="Chunk_-1_-3" parent="." unique_id=1561380568 instance=ExtResource("13_eetxa")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -768)
 
-[node name="Chunk_0_-3" parent="." unique_id=2109681571 instance=ExtResource("14_dftdc")]
+[node name="Chunk_0_-3" parent="." unique_id=1437857169 instance=ExtResource("14_dftdc")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -768)
 
-[node name="Chunk_1_-3" parent="." unique_id=330696572 instance=ExtResource("15_vuxrc")]
+[node name="Chunk_1_-3" parent="." unique_id=884804099 instance=ExtResource("15_vuxrc")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -768)
 
-[node name="Chunk_2_-3" parent="." unique_id=2024252542 instance=ExtResource("16_akgsb")]
+[node name="Chunk_2_-3" parent="." unique_id=1757038217 instance=ExtResource("16_akgsb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -768)
 
-[node name="Chunk_3_-3" parent="." unique_id=1187058188 instance=ExtResource("17_qsddl")]
+[node name="Chunk_3_-3" parent="." unique_id=1427141056 instance=ExtResource("17_qsddl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -768)
 
-[node name="Chunk_-4_-2" parent="." unique_id=1645820003 instance=ExtResource("18_d2ui8")]
+[node name="Chunk_-4_-2" parent="." unique_id=1455544846 instance=ExtResource("18_d2ui8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -512)
 
-[node name="Chunk_-3_-2" parent="." unique_id=1072621483 instance=ExtResource("19_qa2rw")]
+[node name="Chunk_-3_-2" parent="." unique_id=1797492299 instance=ExtResource("19_qa2rw")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -512)
 
-[node name="Chunk_-2_-2" parent="." unique_id=1006902452 instance=ExtResource("20_1oq1t")]
+[node name="Chunk_-2_-2" parent="." unique_id=1753198723 instance=ExtResource("20_1oq1t")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -512)
 
-[node name="Chunk_-1_-2" parent="." unique_id=679641781 instance=ExtResource("21_1fks6")]
+[node name="Chunk_-1_-2" parent="." unique_id=1444423250 instance=ExtResource("21_1fks6")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -512)
 
-[node name="Chunk_0_-2" parent="." unique_id=1353069589 instance=ExtResource("22_tr6jv")]
+[node name="Chunk_0_-2" parent="." unique_id=1677025993 instance=ExtResource("22_tr6jv")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -512)
 
-[node name="Chunk_1_-2" parent="." unique_id=1112492526 instance=ExtResource("23_7dkmd")]
+[node name="Chunk_1_-2" parent="." unique_id=2048692794 instance=ExtResource("23_7dkmd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -512)
 
-[node name="Chunk_2_-2" parent="." unique_id=511304410 instance=ExtResource("24_uox7q")]
+[node name="Chunk_2_-2" parent="." unique_id=259117390 instance=ExtResource("24_uox7q")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -512)
 
-[node name="Chunk_3_-2" parent="." unique_id=106132908 instance=ExtResource("25_eviwm")]
+[node name="Chunk_3_-2" parent="." unique_id=71388687 instance=ExtResource("25_eviwm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -512)
 
-[node name="Chunk_-4_-1" parent="." unique_id=1842801123 instance=ExtResource("26_ehlm3")]
+[node name="Chunk_-4_-1" parent="." unique_id=434633137 instance=ExtResource("26_ehlm3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, -256)
 
-[node name="Chunk_-3_-1" parent="." unique_id=1617662071 instance=ExtResource("27_el8yx")]
+[node name="Chunk_-3_-1" parent="." unique_id=974199956 instance=ExtResource("27_el8yx")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, -256)
 
-[node name="Chunk_-2_-1" parent="." unique_id=1256126456 instance=ExtResource("28_b0b2b")]
+[node name="Chunk_-2_-1" parent="." unique_id=969509696 instance=ExtResource("28_b0b2b")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, -256)
 
-[node name="Chunk_-1_-1" parent="." unique_id=1912601528 instance=ExtResource("29_7o7yj")]
+[node name="Chunk_-1_-1" parent="." unique_id=2141746684 instance=ExtResource("29_7o7yj")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, -256)
 
-[node name="Chunk_0_-1" parent="." unique_id=570409773 instance=ExtResource("30_4i6at")]
+[node name="Chunk_0_-1" parent="." unique_id=66816543 instance=ExtResource("30_4i6at")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -256)
 
-[node name="Chunk_1_-1" parent="." unique_id=20266078 instance=ExtResource("31_bqdu5")]
+[node name="Chunk_1_-1" parent="." unique_id=708732813 instance=ExtResource("31_bqdu5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, -256)
 
-[node name="Chunk_2_-1" parent="." unique_id=884153184 instance=ExtResource("32_qa4kr")]
+[node name="Chunk_2_-1" parent="." unique_id=1583830946 instance=ExtResource("32_qa4kr")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, -256)
 
-[node name="Chunk_3_-1" parent="." unique_id=496203709 instance=ExtResource("33_ai3q2")]
+[node name="Chunk_3_-1" parent="." unique_id=446764985 instance=ExtResource("33_ai3q2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, -256)
 
-[node name="Chunk_-4_0" parent="." unique_id=1213355894 instance=ExtResource("34_065aw")]
+[node name="Chunk_-4_0" parent="." unique_id=274621425 instance=ExtResource("34_065aw")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 0)
 
-[node name="Chunk_-3_0" parent="." unique_id=901587853 instance=ExtResource("35_ych1g")]
+[node name="Chunk_-3_0" parent="." unique_id=1731000581 instance=ExtResource("35_ych1g")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 0)
 
-[node name="Chunk_-2_0" parent="." unique_id=685890517 instance=ExtResource("36_171gl")]
+[node name="Chunk_-2_0" parent="." unique_id=1593503934 instance=ExtResource("36_171gl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 0)
 
-[node name="Chunk_-1_0" parent="." unique_id=1698719669 instance=ExtResource("37_7ve7f")]
+[node name="Chunk_-1_0" parent="." unique_id=1055882786 instance=ExtResource("37_7ve7f")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 0)
 
-[node name="Chunk_0_0" parent="." unique_id=81238242 instance=ExtResource("38_8wkca")]
+[node name="Chunk_0_0" parent="." unique_id=1708823429 instance=ExtResource("38_8wkca")]
 
-[node name="Chunk_1_0" parent="." unique_id=1426001961 instance=ExtResource("39_yf3dc")]
+[node name="Chunk_1_0" parent="." unique_id=1972054507 instance=ExtResource("39_yf3dc")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 0)
 
-[node name="Chunk_2_0" parent="." unique_id=1804841285 instance=ExtResource("40_litds")]
+[node name="Chunk_2_0" parent="." unique_id=1307845608 instance=ExtResource("40_litds")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 0)
 
-[node name="Chunk_3_0" parent="." unique_id=2033796036 instance=ExtResource("41_xv0ey")]
+[node name="Chunk_3_0" parent="." unique_id=1246958328 instance=ExtResource("41_xv0ey")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 0)
 
-[node name="Chunk_-4_1" parent="." unique_id=454232260 instance=ExtResource("42_7rna8")]
+[node name="Chunk_-4_1" parent="." unique_id=639668909 instance=ExtResource("42_7rna8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 256)
 
-[node name="Chunk_-3_1" parent="." unique_id=1320779403 instance=ExtResource("43_ferno")]
+[node name="Chunk_-3_1" parent="." unique_id=1987192390 instance=ExtResource("43_ferno")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 256)
 
-[node name="Chunk_-2_1" parent="." unique_id=606875222 instance=ExtResource("44_rf4os")]
+[node name="Chunk_-2_1" parent="." unique_id=182378026 instance=ExtResource("44_rf4os")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 256)
 
-[node name="Chunk_-1_1" parent="." unique_id=363089309 instance=ExtResource("45_7liv5")]
+[node name="Chunk_-1_1" parent="." unique_id=586764728 instance=ExtResource("45_7liv5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 256)
 
-[node name="Chunk_0_1" parent="." unique_id=739058477 instance=ExtResource("46_stu24")]
+[node name="Chunk_0_1" parent="." unique_id=539179441 instance=ExtResource("46_stu24")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 256)
 
-[node name="Chunk_1_1" parent="." unique_id=1769620623 instance=ExtResource("47_vn3x3")]
+[node name="Chunk_1_1" parent="." unique_id=592563637 instance=ExtResource("47_vn3x3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 256)
 
-[node name="Chunk_2_1" parent="." unique_id=595729642 instance=ExtResource("48_nanqr")]
+[node name="Chunk_2_1" parent="." unique_id=1645925839 instance=ExtResource("48_nanqr")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 256)
 
-[node name="Chunk_3_1" parent="." unique_id=306012630 instance=ExtResource("49_dii2w")]
+[node name="Chunk_3_1" parent="." unique_id=773348096 instance=ExtResource("49_dii2w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 256)
 
-[node name="Chunk_-4_2" parent="." unique_id=576832952 instance=ExtResource("50_c1skd")]
+[node name="Chunk_-4_2" parent="." unique_id=1469726111 instance=ExtResource("50_c1skd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 512)
 
-[node name="Chunk_-3_2" parent="." unique_id=1487523093 instance=ExtResource("51_vwguk")]
+[node name="Chunk_-3_2" parent="." unique_id=1600966116 instance=ExtResource("51_vwguk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 512)
 
-[node name="Chunk_-2_2" parent="." unique_id=1188245528 instance=ExtResource("52_i3puk")]
+[node name="Chunk_-2_2" parent="." unique_id=895618907 instance=ExtResource("52_i3puk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 512)
 
-[node name="Chunk_-1_2" parent="." unique_id=1973374221 instance=ExtResource("53_5e2jd")]
+[node name="Chunk_-1_2" parent="." unique_id=643203887 instance=ExtResource("53_5e2jd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 512)
 
-[node name="Chunk_0_2" parent="." unique_id=355646297 instance=ExtResource("54_8fns2")]
+[node name="Chunk_0_2" parent="." unique_id=848368197 instance=ExtResource("54_8fns2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 512)
 
-[node name="Chunk_1_2" parent="." unique_id=2070418667 instance=ExtResource("55_mps6c")]
+[node name="Chunk_1_2" parent="." unique_id=1586687816 instance=ExtResource("55_mps6c")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 512)
 
-[node name="Chunk_2_2" parent="." unique_id=1510936799 instance=ExtResource("56_oigwb")]
+[node name="Chunk_2_2" parent="." unique_id=506938663 instance=ExtResource("56_oigwb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 512)
 
-[node name="Chunk_3_2" parent="." unique_id=1389354438 instance=ExtResource("57_cuq8h")]
+[node name="Chunk_3_2" parent="." unique_id=815783596 instance=ExtResource("57_cuq8h")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 512)
 
-[node name="Chunk_-4_3" parent="." unique_id=447408523 instance=ExtResource("58_7y1b6")]
+[node name="Chunk_-4_3" parent="." unique_id=1209799448 instance=ExtResource("58_7y1b6")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1024, 0, 768)
 
-[node name="Chunk_-3_3" parent="." unique_id=192617202 instance=ExtResource("59_bq7hi")]
+[node name="Chunk_-3_3" parent="." unique_id=213310343 instance=ExtResource("59_bq7hi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -768, 0, 768)
 
-[node name="Chunk_-2_3" parent="." unique_id=1041890867 instance=ExtResource("60_aocle")]
+[node name="Chunk_-2_3" parent="." unique_id=487670800 instance=ExtResource("60_aocle")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -512, 0, 768)
 
-[node name="Chunk_-1_3" parent="." unique_id=2003962114 instance=ExtResource("61_l7c5m")]
+[node name="Chunk_-1_3" parent="." unique_id=40122593 instance=ExtResource("61_l7c5m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -256, 0, 768)
 
-[node name="Chunk_0_3" parent="." unique_id=39043848 instance=ExtResource("62_lr62l")]
+[node name="Chunk_0_3" parent="." unique_id=1262509775 instance=ExtResource("62_lr62l")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 768)
 
-[node name="Chunk_1_3" parent="." unique_id=1048552814 instance=ExtResource("63_e3vrj")]
+[node name="Chunk_1_3" parent="." unique_id=2079132469 instance=ExtResource("63_e3vrj")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 256, 0, 768)
 
-[node name="Chunk_2_3" parent="." unique_id=595253923 instance=ExtResource("64_ucdsq")]
+[node name="Chunk_2_3" parent="." unique_id=553475344 instance=ExtResource("64_ucdsq")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 768)
 
-[node name="Chunk_3_3" parent="." unique_id=1764436664 instance=ExtResource("65_05x64")]
+[node name="Chunk_3_3" parent="." unique_id=1057129815 instance=ExtResource("65_05x64")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 768, 0, 768)
 
-[node name="PlayerStart" type="Marker3D" parent="." unique_id=1851210578]
-transform = Transform3D(0.35448462, 0, -0.9350619, 0, 1, 0, 0.9350619, 0, 0.35448462, -213.05908, 14.98653, 305.28445)
+[node name="PlayerStart" type="Marker3D" parent="." unique_id=1190131656]
+transform = Transform3D(0.35448462, 0, -0.9350619, 0, 1, 0, 0.9350619, 0, 0.35448462, -213.05908, 15.215803, 305.28445)
 
-[node name="Bounds" type="StaticBody3D" parent="." unique_id=1283657738]
+[node name="Bounds" type="StaticBody3D" parent="." unique_id=15776856]
 collision_mask = 0
 
-[node name="Wall0" type="CollisionShape3D" parent="Bounds" unique_id=128207341]
+[node name="Wall0" type="CollisionShape3D" parent="Bounds" unique_id=945233373]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1034, 0, 0)
 shape = SubResource("BoxShape3D_3r6xe")
 
-[node name="Wall1" type="CollisionShape3D" parent="Bounds" unique_id=1465430063]
+[node name="Wall1" type="CollisionShape3D" parent="Bounds" unique_id=979206188]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1034, 0, 0)
 shape = SubResource("BoxShape3D_5cthv")
 
-[node name="Wall2" type="CollisionShape3D" parent="Bounds" unique_id=1882639100]
+[node name="Wall2" type="CollisionShape3D" parent="Bounds" unique_id=1531803221]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1034)
 shape = SubResource("BoxShape3D_nqgjr")
 
-[node name="Wall3" type="CollisionShape3D" parent="Bounds" unique_id=490810302]
+[node name="Wall3" type="CollisionShape3D" parent="Bounds" unique_id=162025083]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1034)
 shape = SubResource("BoxShape3D_dtt4n")

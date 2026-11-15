@@ -9,9 +9,14 @@
 #   Roads/<NEW_ROADS>     — грунтовки к местам и точкам (кривые с этими именами
 #                           удаляются и строятся заново, чужие дороги не трогает);
 #   Places, Spots         — пустышки с id из PLACES и SPOTS (чужие не трогает);
-#   PlayerStart           — положение и направление.
-# Рельеф (вершины Terrain), старые дороги и маски растительности не меняются: прогалины
-# вокруг построек и точек делает запекание (docs/map-pipeline.md, «Лес и прогалины»).
+#   PlayerStart           — положение и направление;
+#   Terrain               — холм над озером, отмель у второго причала и просеки леса
+#                           на склоне холма (shape_terrain). Исходные высоты и маска
+#                           forest хранятся в атрибутах сетки BASE_H и BASE_FOREST и
+#                           берутся из них при каждом запуске, правки не копятся.
+#                           Ручная лепка в зоне этих правок при запуске пропадает.
+# Старые дороги не меняются. Прогалины вокруг построек и точек делает запекание
+# (docs/map-pipeline.md, «Лес и прогалины»).
 #
 # Координаты ниже — Godot (x, z): x тот же, z = −y Blender. Соглашения о пустышках —
 # docs/map-pipeline.md (Props, Places/Spots, «Модели деревни»). Модель смотрит фасадом в
@@ -26,12 +31,13 @@ from mathutils.bvhtree import BVHTree
 from mathutils.geometry import interpolate_bezier
 
 WATER = -4.0
+ROAD_MIN_Y = WATER + 0.8  # как ROAD_MIN_Y в tools/bake_world.gd: ниже дорога не опускается
 M = "res://game/world/models/village/"
 VILLAGE_COLLS = ("Village", "EastPier", "FishingCamp", "FarFarm")
 
 # Места: имя пустышки, id, title, x, z, radius.
 PLACES = [
-    ("Place_HillView", "hill_view", "Холм над озером", -302.0, 530.0, 40.0),  # вершина: Dirt_Hill и бровка Dirt_Cape
+    ("Place_HillView", "hill_view", "Холм над озером", -315.0, 505.0, 40.0),  # северная бровка: Dirt_Hill и Dirt_Cape
     ("Place_ForestTrack", "forest_track", "Лесная грунтовка", None, None, 30.0),  # точка на Dirt_South
     ("Place_LakeCape", "lake_cape", "Мыс", -556.0, 474.0, 30.0),  # Dirt_Cape проходит через радиус
 ]
@@ -42,30 +48,68 @@ FOREST_TRACK_NEAR = (205.0, -380.0)  # ближайшая точка Dirt_South 
 # два конца в одной точке шоссе — перекрёсток (docs/map-pipeline.md, make_map.py).
 # Профиль запекания ограничен уклоном 14 %, поэтому дороги идут по пологим склонам:
 # точки подобраны по рельефу так, чтобы сглаженный уклон был не больше ~10 %.
-NEW_ROADS = ("Dirt_Hill", "Dirt_Farm", "Dirt_Cape", "Dirt_Pier")
+NEW_ROADS = ("Dirt_Hill", "Dirt_Farm", "Dirt_Cape", "Dirt_Pier", "Dirt_Shore")
+OLD_ROADS = ("Dirt_NetShed",)  # были раньше, удаляются
 # Dirt_Hill: с площади деревни на юг по террасе вдоль восточного берега, на холм над
-# озером (~18 м), вниз к кольцевому шоссе. Начало — на Dirt_Lake за HILL_FROM_END_M до её
+# озером (~26 м), вниз к кольцевому шоссе. Начало — на Dirt_Lake за HILL_FROM_END_M до её
 # конца: конец Dirt_Lake (площадь) должен быть дальше 8 м от Dirt_Hill, иначе запекание
-# пристегнёт его к ней Т-перекрёстком.
-HILL_ROAD = [(-247.0, 343.0), (-248.0, 400.0), (-258.0, 470.0), (-286.0, 528.0),
-             (-301.0, 590.0), (-294.0, 645.0)]
+# пристегнёт его к ней Т-перекрёстком. Подъём ~11 %, спуск петлёй на запад.
+HILL_ROAD = [(-247.0, 343.0), (-246.0, 400.0), (-254.0, 460.0), (-276.0, 505.0),
+             (-302.0, 530.0), (-318.0, 570.0), (-306.0, 620.0), (-290.0, 660.0)]
 HILL_FROM_END_M = 20.0
 HILL_RING_NEAR = (-292.0, 701.0)
-# Dirt_Farm: от того же места на шоссе на юг, на пригорок у подножия краевых холмов.
-FARM_ROAD = [(-296.0, 750.0), (-310.0, 792.0)]
+# Dirt_Farm: от того же места на шоссе на юг через низину к подножию краевых холмов.
+FARM_ROAD = [(-300.0, 742.0), (-326.0, 780.0), (-356.0, 820.0), (-360.0, 855.0), (-346.0, 880.0)]
 # Dirt_Cape: с вершины холма к северной бровке (вид вниз на озеро), на запад по гребню,
 # вниз на узкий берег у самой воды, через мыс на перешеек к пруду (рыбацкий лагерь).
-CAPE_FROM_NEAR = (-292.0, 540.0)
-CAPE_ROAD = [(-315.0, 506.0), (-350.0, 510.0), (-395.0, 532.0), (-435.0, 532.0),
-             (-480.0, 508.0), (-530.0, 500.0), (-560.0, 490.0), (-588.0, 505.0)]
+CAPE_FROM_NEAR = (-310.0, 550.0)
+CAPE_ROAD = [(-330.0, 520.0), (-365.0, 515.0), (-405.0, 535.0), (-445.0, 542.0),
+             (-482.0, 522.0), (-520.0, 506.0), (-555.0, 494.0), (-588.0, 505.0)]
+# Dirt_Shore: от Dirt_Cape перед лагерем на север вдоль западного берега у самой воды
+# (0–2 м над водой, уклон ~5 %) и по северному берегу к второму причалу, точка — в её
+# конце. Замыкает объезд озера: сети со склада можно везти через холм, Мыс и лагерь.
+SHORE_FROM_NEAR = (-565.0, 492.0)
+SHORE_ROAD = [(-594.0, 465.0), (-594.0, 420.0), (-590.0, 375.0), (-575.0, 335.0),
+              (-550.0, 302.0), (-522.0, 282.0), (-500.0, 272.0)]
+PIER_END = (-472.0, 269.0)
 # Dirt_Pier: от поперечного шоссе на юг через лес, серпантином (разворот у бровки) вниз
-# по берегу к самой воде у второго причала. Берег у причала ~25 %, поэтому спуск идёт
-# наискосок, вдоль берега. Причал ставится на высоту конца дороги (см. place_east_pier).
+# по берегу к Dirt_Shore перед вторым причалом (Т-перекрёсток). Берег у причала ~25 %,
+# поэтому спуск идёт наискосок. Причал ставится на высоту конца Dirt_Shore (place_east_pier).
 PIER_CROSS_NEAR = (-480.0, 131.0)
 # Разворот — севернее z = 256 (граница чанков): на границе дорога должна быть почти прямой
 # (tests: test_world_map, «дорога гладко переходит через границу чанка»).
-PIER_ROAD = [(-508.0, 185.0), (-540.0, 218.0), (-552.0, 240.0), (-535.0, 252.0),
-             (-505.0, 264.0), (-472.0, 269.0)]
+PIER_ROAD = [(-508.0, 185.0), (-540.0, 218.0), (-552.0, 240.0), (-535.0, 254.0)]
+PIER_SHORE_NEAR = (-514.0, 278.0)
+
+# Рельеф (shape_terrain). Холм над озером: подъём HILL_LIFT_M в вершине, к HILL_RADIUS_M
+# сходит на нет по (1 − d/R)^HILL_SHAPE — вершина острая, склоны вогнутые, с бровки видно
+# вниз. У воды и в озере не поднимается. Вершина ~28 м, на ~14 м выше деревни; дороги на
+# холм не круче ~12 % (предел запекания 14 %).
+HILL_TOP = (-305.0, 528.0)
+HILL_LIFT_M = 10.0
+HILL_RADIUS_M = 240.0
+HILL_SHAPE = 1.2
+# Просеки: лес в маске forest не гуще VIEW_FOREST. Вершина и бровка — луг, от бровки
+# полосы к деревне и к озеру, луг в самой деревне (отрезок, полуширина; к краю лес
+# возвращается за VIEW_BLEND_M). Иначе деревню с холма закрывает лес вокруг домов.
+VIEW_FOREST = 0.0
+VIEW_BLEND_M = 25.0
+VIEW_BROW = (-315.0, 505.0)
+VIEW_CLEARINGS = [
+    (HILL_TOP, VIEW_BROW, 45.0),
+    (VIEW_BROW, (-410.0, 445.0), 50.0),  # к озеру и тому берегу
+    (HILL_TOP, (-255.0, 345.0), 40.0),  # веер к деревне: крыши видны вниз по склону
+    (HILL_TOP, (-205.0, 315.0), 40.0),
+    ((-262.0, 328.0), (-165.0, 288.0), 30.0),  # сама деревня: огороды и луг вместо леса
+]
+# Отмель у второго причала: рельеф не выше PIER_SHELF_Y в круге PIER_SHELF_R_M у конца
+# Dirt_Shore, дальше плавно к исходному за PIER_SHELF_BLEND_M. Конец дороги ложится на
+# ROAD_MIN_Y, причал — у самой воды.
+PIER_SHELF_Y = WATER + 0.6
+PIER_SHELF_R_M = 14.0
+PIER_SHELF_BLEND_M = 18.0
+BASE_H = "base_height"
+BASE_FOREST = "base_forest"
 
 
 def g2b(x, z, y=0.0):
@@ -83,6 +127,76 @@ def norm(x, z):
 
 
 # --- Рельеф и дороги --------------------------------------------------------------
+
+def smoothstep(a, b, x):
+    t = min(max((x - a) / (b - a), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def seg_dist(p, a, b):
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    l2 = dx * dx + dz * dz
+    u = 0.0 if l2 < 1e-9 else max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2))
+    return math.hypot(p[0] - a[0] - dx * u, p[1] - a[1] - dz * u)
+
+
+def shaped_height(x, z, h):
+    """Высота после правок: h — исходная высота вершины."""
+    k = max(0.0, 1.0 - math.hypot(x - HILL_TOP[0], z - HILL_TOP[1]) / HILL_RADIUS_M) ** HILL_SHAPE
+    h += HILL_LIFT_M * k * smoothstep(-6.0, 6.0, h)
+    ex, ez = PIER_END
+    t = smoothstep(PIER_SHELF_R_M, PIER_SHELF_R_M + PIER_SHELF_BLEND_M, math.hypot(x - ex, z - ez))
+    return min(h, PIER_SHELF_Y + (h - PIER_SHELF_Y) * t) if h > PIER_SHELF_Y else h
+
+
+def forest_cap(x, z):
+    """Наибольшая густота леса в точке: 1 — без ограничений."""
+    cap = 1.0
+    for a, b, half in VIEW_CLEARINGS:
+        d = seg_dist((x, z), a, b)
+        cap = min(cap, VIEW_FOREST + (1.0 - VIEW_FOREST) * smoothstep(half, half + VIEW_BLEND_M, d))
+    return cap
+
+
+def shape_terrain():
+    """Правки рельефа и маски forest от исходных значений из атрибутов сетки."""
+    terr = bpy.data.objects["Terrain"]
+    me = terr.data
+    mw = terr.matrix_world
+    vg = terr.vertex_groups["forest"]
+    if BASE_H not in me.attributes:
+        attr = me.attributes.new(BASE_H, "FLOAT", "POINT")
+        for v in me.vertices:
+            attr.data[v.index].value = (mw @ v.co).z
+    if BASE_FOREST not in me.attributes:
+        attr = me.attributes.new(BASE_FOREST, "FLOAT", "POINT")
+        for v in me.vertices:
+            w = 0.0
+            for g in v.groups:
+                if g.group == vg.index:
+                    w = g.weight
+            attr.data[v.index].value = w
+    base_h = me.attributes[BASE_H].data
+    base_f = me.attributes[BASE_FOREST].data
+    inv = mw.inverted()
+    moved = 0
+    cleared = 0
+    for v in me.vertices:
+        p = mw @ v.co
+        x, z = p.x, -p.y
+        h0 = base_h[v.index].value
+        h = shaped_height(x, z, h0)
+        if abs(h - h0) > 1e-4 or abs(p.z - h0) > 1e-4:
+            v.co = inv @ Vector((p.x, p.y, h))
+            moved += 1
+        f0 = base_f[v.index].value
+        if f0 > 0.0:
+            f = min(f0, forest_cap(x, z))
+            vg.add([v.index], f, "REPLACE")
+            cleared += f < f0
+    me.update()
+    print("Рельеф: вершин сдвинуто %d, лес прорежен у %d" % (moved, cleared))
+
 
 class Ground:
     def __init__(self):
@@ -230,11 +344,12 @@ def place_village(pl, lake):
     # Лавка — сбоку от торца дороги: за торцом машине нужно место для разворота.
     pl.prop("Shop", "shop", ex + d[0] * 9.0 - d[1] * 12.5, ez + d[1] * 9.0 + d[0] * 12.5,
             norm(d[1] - d[0] * 0.35, -d[0] - d[1] * 0.35))
-    pl.prop("NetShed", "net_shed", -279.0, 349.0, norm(1.0, -0.7))
-    # Вешала на краю террасы у склада.
-    pl.prop("NetRack_1", "net_rack", -288.0, 360.0, norm(-1.0, 0.25), collision="none")
-    pl.prop("NetRack_2", "net_rack", -284.5, 366.5, norm(-1.0, 0.1), collision="none")
-    pl.prop("NetRack_3", "net_rack", -270.0, 364.0, norm(0.2, -1.0), collision="none")
+    # Склад — у Dirt_Hill фасадом к дороге: точка доставки на оси напротив, ~16 м.
+    pl.prop("NetShed", "net_shed", NET_SHED_AT[0], NET_SHED_AT[1], norm(1.0, -0.1))
+    # Вешала за складом, на краю террасы.
+    pl.prop("NetRack_1", "net_rack", -282.0, 356.0, norm(-1.0, 0.25), collision="none")
+    pl.prop("NetRack_2", "net_rack", -279.5, 364.5, norm(-1.0, 0.1), collision="none")
+    pl.prop("NetRack_3", "net_rack", -268.0, 366.0, norm(0.2, -1.0), collision="none")
     # Причал под террасой, в сторону центра озера; две лодки у причала, одна поодаль.
     px, pz = -350.5, 349.0
     out = norm(-450.0 - px, 380.0 - pz)
@@ -245,16 +360,16 @@ def place_village(pl, lake):
 
 
 def place_east_pier(pl):
-    """Второй причал — на северном берегу, напротив деревни через озеро, у конца Dirt_Pier.
-    Запекание кладёт конец дороги на среднюю высоту рельефа в круге 6 м (не ниже −2,4) и
+    """Второй причал — на северном берегу, напротив деревни через озеро, у конца Dirt_Shore.
+    Запекание кладёт конец дороги на среднюю высоту рельефа в круге 6 м (не ниже ROAD_MIN_Y) и
     выравнивает землю вокруг на ~9 м: береговой конец причала стоит в этой полосе, поэтому
     его высота — та же, чуть ниже полотна, а не рельеф до запекания (иначе причал засыпет)."""
-    ex, ez = PIER_ROAD[-1]
+    ex, ez = PIER_END
     end_y = sum(pl.g.h(ex + dx, ez + dz) for dx, dz in ((0, 0), (6, 0), (-6, 0), (0, 6), (0, -6))) / 5.0
     px, pz = -462.0, 271.0
     out = norm(0.05, 1.0)
     pl.prop("Pier_East", "pier", px, pz, (-out[0], -out[1]), snap=False, collision="none",
-            y=max(end_y, WATER + 1.6) - 0.1)
+            y=max(end_y, ROAD_MIN_Y) - 0.1)
     pl.boat_at_pier("Boat_East", px, pz, out, 12.0, 2.2, -3.0)
     pl.prop("NetRack_East", "net_rack", -450.0, 259.0, norm(-1.0, 0.3), collision="none")
 
@@ -271,16 +386,18 @@ def place_fishing_camp(pl):
 
 
 def place_far_farm(pl):
-    """Хутор на пригорке за кольцевым шоссе, у подножия краевых холмов, в конце Dirt_Farm:
-    дом, второй дом и сарай вокруг двора, фасадами во двор."""
-    yard = (-310.0, 797.0)
+    """Хутор в низине у подножия краевых холмов, в конце Dirt_Farm: дом, второй дом и
+    сарай вокруг двора, фасадами во двор. За сараем начинается подъём к краю карты."""
+    ex, ez = FARM_ROAD[-1]
+    yard = (ex + 1.0, ez + 8.0)
 
-    def face(x, z):
-        return norm(yard[0] - x, yard[1] - z)
+    def put(name, model, dx, dz):
+        x, z = yard[0] + dx, yard[1] + dz
+        pl.prop(name, model, x, z, norm(yard[0] - x, yard[1] - z))
 
-    pl.prop("Farm_House_A", "house_a", -327.0, 804.0, face(-327.0, 804.0))
-    pl.prop("Farm_House_B", "house_b", -293.0, 806.0, face(-293.0, 806.0))
-    pl.prop("Farm_Barn", "net_shed", -311.0, 824.0, face(-311.0, 824.0))
+    put("Farm_House_A", "house_a", -19.0, -3.0)
+    put("Farm_House_B", "house_b", 21.0, 1.0)
+    put("Farm_Barn", "net_shed", 1.0, 17.0)
 
 
 # Точки доставок стоят на оси дороги (docs/map-pipeline.md): подсказка должна появляться
@@ -288,7 +405,7 @@ def place_far_farm(pl):
 # полосы с запасом ~5 м и ~18 м вдоль дороги. У тупиков точка — за SPOT_END_M до конца.
 SPOT_R_M = 9.0
 SPOT_END_M = 3.0
-NET_SHED_NEAR = (-279.0, 349.0)  # склад сетей: точка — на Dirt_Hill напротив него
+NET_SHED_AT = (-264.0, 352.0)  # склад сетей: точка — на Dirt_Hill напротив него
 
 
 def spots(lake, roads):
@@ -297,13 +414,13 @@ def spots(lake, roads):
         return along_from_end(poly, SPOT_END_M)[0]
 
     smoke, _ = along_from_end(lake, 63.0)
-    net = nearest_on(roads["Dirt_Hill"], *NET_SHED_NEAR)
+    net = nearest_on(roads["Dirt_Hill"], *NET_SHED_AT)
     return [
         ("Spot_Smokehouse", "smokehouse", "Коптильня", smoke[0], smoke[1], SPOT_R_M),
         ("Spot_Shop", "shop", "Лавка", *end_of(lake), SPOT_R_M),  # торец Dirt_Lake, площадь
         ("Spot_NetShed", "net_shed", "Склад сетей", net[0], net[1], SPOT_R_M),
         ("Spot_FarFarm", "far_farm", "Хутор на холмах", *end_of(roads["Dirt_Farm"]), SPOT_R_M),
-        ("Spot_EastPier", "east_pier", "Причал на том берегу", *end_of(roads["Dirt_Pier"]), SPOT_R_M),
+        ("Spot_EastPier", "east_pier", "Причал на том берегу", *end_of(roads["Dirt_Shore"]), SPOT_R_M),
         ("Spot_FishingCamp", "fishing_camp", "Рыбацкий лагерь", *end_of(roads["Dirt_Cape"]), SPOT_R_M),
     ]
 
@@ -365,7 +482,7 @@ def build_roads(ground, lake, cross, ring):
     """Пересоздаёт NEW_ROADS. Возвращает их ломаные (Godot x, z) по имени."""
     coll = bpy.data.collections["Roads"]
     like = bpy.data.objects["Dirt_Lake"]
-    for name in NEW_ROADS:
+    for name in NEW_ROADS + OLD_ROADS:
         old = bpy.data.objects.get(name)
         if old is not None:
             data = old.data
@@ -378,7 +495,12 @@ def build_roads(ground, lake, cross, ring):
     hill = road_polyline("Dirt_Hill")
     make_road("Dirt_Farm", [at_ring] + FARM_ROAD, ground, coll, like)
     make_road("Dirt_Cape", [nearest_on(hill, *CAPE_FROM_NEAR)] + CAPE_ROAD, ground, coll, like)
-    make_road("Dirt_Pier", [nearest_on(cross, *PIER_CROSS_NEAR)] + PIER_ROAD, ground, coll, like)
+    cape = road_polyline("Dirt_Cape")
+    make_road("Dirt_Shore", [nearest_on(cape, *SHORE_FROM_NEAR)] + SHORE_ROAD + [PIER_END],
+              ground, coll, like)
+    shore = road_polyline("Dirt_Shore")
+    make_road("Dirt_Pier", [nearest_on(cross, *PIER_CROSS_NEAR)] + PIER_ROAD
+              + [nearest_on(shore, *PIER_SHORE_NEAR)], ground, coll, like)
     return {name: road_polyline(name) for name in NEW_ROADS}
 
 
@@ -386,6 +508,7 @@ def build_roads(ground, lake, cross, ring):
 
 def main():
     scene_root = bpy.context.scene.collection
+    shape_terrain()
     ground = Ground()
     lake = road_polyline("Dirt_Lake")
     cross = road_polyline("Highway_Cross")
