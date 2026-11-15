@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DeliveryDef" format=3]
+
+[ext_resource type="Script" path="res://game/missions/delivery_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "smoked_fish"
+cargo = "ящик копчёной рыбы"
+from_spot = "smokehouse"
+to_spot = "far_farm"
+journal_text = "Отвёз копчёную рыбу из деревенской коптильни на хутор за холмом. Хозяин приподнял крышку ящика, улыбнулся и позвал заезжать ещё."
+order = 1
