@@ -2,8 +2,8 @@ class_name OpenWorld
 extends Node3D
 ## Игровая сессия в открытом мире: окружение и свет, мир из сцен-чанков
 ## (подгружаются вокруг игрока, см. ChunkStreamer), машина игрока, камера,
-## трафик, погони, сутки и погода, HUD, бортовой журнал (journal) и счётчик
-## поездки (trip_stats). Создаётся из main.gd через
+## трафик, погони, сутки и погода, HUD, бортовой журнал (journal), счётчик
+## поездки (trip_stats), открытие мест (places) и доставки (deliveries). Создаётся из main.gd через
 ## OpenWorld.create(seed); готовность — сигнал ready_to_play (стартовые чанки
 ## грузятся несколько кадров). Сид влияет на трафик, погони и погоду, сам
 ## мир — фиксированный.
@@ -29,6 +29,10 @@ var hud: GameHud
 ## Бортовой журнал игрока; грузится из journal_path при входе в мир.
 var journal: Journal
 var trip_stats: TripStats
+## Открытие мест по радиусу (данные — WorldIndex.places).
+var places: PlaceTracker
+## Доставки (точки — WorldIndex.spots, задания — game/missions/*.tres).
+var deliveries: Deliveries
 ## Путь сохранения журнала (тесты подставляют свой до add_child).
 var journal_path: String = Journal.PATH
 var env: Environment
@@ -98,6 +102,17 @@ func _ready() -> void:
 	trip_stats.setup(journal, player, weather, day_night)
 	add_child(trip_stats)
 
+	# Поля places/spots в сводке может ещё не быть (старое запекание) — тогда пусто.
+	places = PlaceTracker.new()
+	places.name = "Places"
+	places.setup(journal, player, PlaceTracker.from_index(index, "places"), trip_stats)
+	add_child(places)
+
+	deliveries = Deliveries.new()
+	deliveries.name = "Deliveries"
+	deliveries.setup(journal, player, PlaceTracker.from_index(index, "spots"), DeliveryDef.load_all(), trip_stats)
+	add_child(deliveries)
+
 	traffic = TrafficManager.new()
 	traffic.name = "Traffic"
 	traffic.setup(self, world_seed + 7)
@@ -117,6 +132,10 @@ func _ready() -> void:
 	apply_quality()
 	loading = false
 	trip_stats.active = true
+	# После hud.setup: интерфейс уже подписан и получит стартовую цель.
+	deliveries.start()
+	places.active = true
+	deliveries.enabled = true
 	ready_to_play.emit()
 
 

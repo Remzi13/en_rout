@@ -86,9 +86,10 @@ func hour() -> float:
 	return day_night.hour if day_night != null else 12.0
 
 
-## Запись в журнал с текущими временем суток и погодой (сохраняется сразу).
-func add_event(kind: String, text: String) -> Dictionary:
-	return journal.add_entry(kind, text, hour(), weather_key())
+## Запись в журнал с текущими временем суток и погодой (сохраняется сразу);
+## id — доставки или места.
+func add_event(kind: String, text: String, id: String = "") -> Dictionary:
+	return journal.add_entry(kind, text, hour(), weather_key(), id)
 
 
 func save() -> void:

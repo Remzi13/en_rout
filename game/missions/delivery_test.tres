@@ -1,0 +1,15 @@
+; Заглушка для проверки логики доставок: тексты заменит game-designer,
+; точки test_from / test_to — level-designer (id из коллекции Spots в map.blend).
+; Пока таких точек на карте нет, доставка в игре не выдаётся.
+[gd_resource type="Resource" script_class="DeliveryDef" format=3]
+
+[ext_resource type="Script" path="res://game/missions/delivery_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "test"
+cargo = "копчёная рыба"
+from_spot = "test_from"
+to_spot = "test_to"
+journal_text = "Отвёз копчёную рыбу из коптильни."
+order = 1
