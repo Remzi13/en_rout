@@ -50,6 +50,10 @@ func _run() -> void:
 
 	# Места: повторное открытие.
 	H.check("место открывается", j.open_place("hill_view"))
+	H.check("open_place сохраняет на диск", Journal.load_or_new(PATH).is_place_open("hill_view"))
+	H.check("open_place(id, false) не пишет файл", j.open_place("lake_cape", false)
+		and j.is_place_open("lake_cape") and not Journal.load_or_new(PATH).is_place_open("lake_cape"))
+	j.places.erase("lake_cape")
 	H.check("повторно место не открывается", not j.open_place("hill_view"))
 	H.check("is_place_open", j.is_place_open("hill_view") and not j.is_place_open("old_bridge"))
 	j.add_entry(Journal.KIND_PLACE, "Вид с холма", 7.0, Journal.WEATHER_CLEAR)
