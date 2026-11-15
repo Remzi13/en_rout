@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DeliveryDef" format=3]
+
+[ext_resource type="Script" path="res://game/missions/delivery_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "boat_motor"
+cargo = "лодочный мотор"
+from_spot = "shop"
+to_spot = "fishing_camp"
+journal_text = "Довёз лодочный мотор из лавки до рыбацкого лагеря у воды. Его сразу поставили на лодку, и она тихо ушла от берега."
+order = 3
