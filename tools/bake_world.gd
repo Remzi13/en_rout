@@ -47,6 +47,8 @@ const ROAD_SINK_M := 0.12 ## рельеф под дорогой ниже пол�
 const SMOOTH_RADIUS := 10
 const SMOOTH_PASSES := 3
 const PAD_LIFT_M := 0.03
+const HIGHWAY_HALF_M := 6.0 ## половина WorldDefs.ROAD_WIDTHS шоссе
+const DIRT_TRIM_M := HIGHWAY_HALF_M - 1.0 ## грунтовка заходит под кромку асфальта на метр
 const PAD_RADIUS_M := 10.0
 const VEG_STEP := 7.0
 const VEG_SEED := 42
@@ -276,12 +278,14 @@ func _build_roads(src: Array) -> void:
 		for k in 5: # среднее по кругу: узел не садится на кочку
 			var off := Vector2.ZERO if k == 0 else Vector2(6.0, 0.0).rotated(k * TAU / 4.0)
 			y += _sample(_hgt, p.x + off.x, p.y + off.y) / 5.0
-		_nodes.append({"pos": Vector3(p.x, maxf(y, ROAD_MIN_Y), p.y), "degree": 0, "highway": false})
+		_nodes.append({"pos": Vector3(p.x, maxf(y, ROAD_MIN_Y), p.y), "degree": 0, "highway": false, "highways": 0})
 	for ln: Dictionary in lines:
 		for end in ["a", "b"]:
 			var nd: Dictionary = _nodes[ln[end]]
 			nd["degree"] += 1
-			nd["highway"] = nd["highway"] or ln["type"] == WorldDefs.RoadType.HIGHWAY
+			if ln["type"] == WorldDefs.RoadType.HIGHWAY:
+				nd["highway"] = true
+				nd["highways"] += 1
 		var pts: PackedVector2Array = ln["pts"]
 		pts[0] = nodes[ln["a"]]
 		pts[pts.size() - 1] = nodes[ln["b"]]
@@ -299,7 +303,11 @@ func _build_roads(src: Array) -> void:
 		var pts3 := PackedVector3Array()
 		for k in flat.size():
 			pts3.append(Vector3(flat[k].x, h[k], flat[k].y))
-		_roads.append({"points": pts3, "type": ln["type"]})
+		# Грунтовка у шоссе: полотно обрезается у кромки асфальта.
+		var dirt: bool = ln["type"] == WorldDefs.RoadType.DIRT
+		_roads.append({"points": pts3, "type": ln["type"],
+			"trim_a": DIRT_TRIM_M if dirt and _nodes[ln["a"]]["highway"] else 0.0,
+			"trim_b": DIRT_TRIM_M if dirt and _nodes[ln["b"]]["highway"] else 0.0})
 
 
 func _node_for(nodes: PackedVector2Array, p: Vector2) -> int:
@@ -551,6 +559,8 @@ func _split_roads() -> Dictionary:
 					"origin": origin,
 					"type": r["type"],
 					"uv": dists[start],
+					"trim_start": r["trim_a"] if start == 0 else 0.0,
+					"trim_end": r["trim_b"] if last else 0.0,
 				})
 				start = k
 	return out
@@ -706,6 +716,8 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 		n += 1
 		rp.road_type = piece["type"]
 		rp.uv_offset_m = piece["uv"]
+		rp.trim_start_m = piece["trim_start"]
+		rp.trim_end_m = piece["trim_end"]
 		rp.curve = piece["curve"]
 		roads.add_child(rp)
 
@@ -722,6 +734,9 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 		j.name = "Junction%d" % n
 		n += 1
 		j.highway = nd["highway"]
+		# Шоссе идёт насквозь, остальное — грунтовки: круг прячется под асфальтом.
+		if nd["highways"] == 2:
+			j.radius_m = HIGHWAY_HALF_M
 		j.position = np - origin + Vector3(0.0, PAD_LIFT_M, 0.0)
 		junctions.add_child(j)
 

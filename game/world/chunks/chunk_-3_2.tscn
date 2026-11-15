@@ -49,37 +49,37 @@ buffer = PackedFloat32Array(0.93103725, 0, -0.31950593, 67.976585, 0, 0.98433447
 [sub_resource type="BoxShape3D" id="BoxShape3D_p21ll"]
 size = Vector3(2.98, 3.52, 3.2)
 
-[node name="Chunk_-3_2" type="Node3D" unique_id=1600966116]
+[node name="Chunk_-3_2" type="Node3D" unique_id=1705902967]
 script = ExtResource("1_a4ddr")
 coord = Vector2i(-3, 2)
 
-[node name="Terrain" type="MeshInstance3D" parent="." unique_id=1304507486]
+[node name="Terrain" type="MeshInstance3D" parent="." unique_id=976540657]
 mesh = ExtResource("2_u7a7i")
 
-[node name="TerrainBody" type="StaticBody3D" parent="." unique_id=789066048]
+[node name="TerrainBody" type="StaticBody3D" parent="." unique_id=242563981]
 collision_mask = 0
 metadata/surface = 2
 
-[node name="Shape" type="CollisionShape3D" parent="TerrainBody" unique_id=599705360]
+[node name="Shape" type="CollisionShape3D" parent="TerrainBody" unique_id=1521158045]
 shape = ExtResource("3_i6145")
 
-[node name="Water" type="MeshInstance3D" parent="." unique_id=1673438141]
+[node name="Water" type="MeshInstance3D" parent="." unique_id=1515399369]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 0)
 cast_shadow = 0
 mesh = ExtResource("4_11kb1")
 
-[node name="Roads" type="Node3D" parent="." unique_id=677659690]
+[node name="Roads" type="Node3D" parent="." unique_id=1489292846]
 
-[node name="Road0" type="Path3D" parent="Roads" unique_id=1594910668]
+[node name="Road0" type="Path3D" parent="Roads" unique_id=397344061]
 curve = SubResource("Curve3D_lpwc0")
 script = ExtResource("5_mrt18")
 uv_offset_m = 220.46613
 
-[node name="Junctions" type="Node3D" parent="." unique_id=51048698]
+[node name="Junctions" type="Node3D" parent="." unique_id=1884463031]
 
-[node name="Vegetation" type="Node3D" parent="." unique_id=175574522]
+[node name="Vegetation" type="Node3D" parent="." unique_id=237068010]
 
-[node name="Conifers" type="MultiMeshInstance3D" parent="Vegetation" unique_id=802255664]
+[node name="Conifers" type="MultiMeshInstance3D" parent="Vegetation" unique_id=169656083]
 visibility_range_end = 520.0
 visibility_range_end_margin = 20.0
 multimesh = SubResource("MultiMesh_kycio")
@@ -87,7 +87,7 @@ script = ExtResource("6_bhyhp")
 collider_radius = 0.35
 tree_preset = 1
 
-[node name="Trees" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1423095214]
+[node name="Trees" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1231041994]
 visibility_range_end = 520.0
 visibility_range_end_margin = 20.0
 multimesh = SubResource("MultiMesh_cugwr")
@@ -95,7 +95,7 @@ script = ExtResource("6_bhyhp")
 collider_radius = 0.35
 tree_preset = 2
 
-[node name="Rocks" type="MultiMeshInstance3D" parent="Vegetation" unique_id=220171730]
+[node name="Rocks" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1414540789]
 visibility_range_end = 380.0
 visibility_range_end_margin = 20.0
 multimesh = SubResource("MultiMesh_37faq")
@@ -104,7 +104,7 @@ collider_radius = 0.8
 collider_height = 0.9
 collider_min_scale = 1.0
 
-[node name="Bushes" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1317233700]
+[node name="Bushes" type="MultiMeshInstance3D" parent="Vegetation" unique_id=459626389]
 cast_shadow = 0
 visibility_range_end = 220.0
 visibility_range_end_margin = 20.0
@@ -112,39 +112,39 @@ multimesh = SubResource("MultiMesh_yqgl5")
 script = ExtResource("6_bhyhp")
 collider_height = 0.0
 
-[node name="Props" type="Node3D" parent="." unique_id=430285787]
+[node name="Props" type="Node3D" parent="." unique_id=2058623233]
 
-[node name="Camp_Boat_Shore1" type="Node3D" parent="Props" unique_id=1344456829]
+[node name="Camp_Boat_Shore1" type="Node3D" parent="Props" unique_id=303812332]
 transform = Transform3D(-0.24254052, 0, 0.9701413, 0, 1, 0, -0.9701413, 0, -0.24254052, 159, -2.9968042, 2)
 
 [node name="Model" parent="Props/Camp_Boat_Shore1" unique_id=1293890725 instance=ExtResource("9_v6ynp")]
 
-[node name="Camp_Boat_Shore2" type="Node3D" parent="Props" unique_id=367936487]
+[node name="Camp_Boat_Shore2" type="Node3D" parent="Props" unique_id=720695243]
 transform = Transform3D(0.099501394, 0, 0.99503744, 0, 1, 0, -0.99503744, 0, 0.099501394, 163, -3.0842998, 12)
 
-[node name="Model" parent="Props/Camp_Boat_Shore2" unique_id=419977181 instance=ExtResource("9_v6ynp")]
+[node name="Model" parent="Props/Camp_Boat_Shore2" unique_id=1037027633 instance=ExtResource("9_v6ynp")]
 
-[node name="Camp_Boat_Water" type="Node3D" parent="Props" unique_id=1082721028]
+[node name="Camp_Boat_Water" type="Node3D" parent="Props" unique_id=1715665377]
 transform = Transform3D(-0.9578275, 0, -0.28734383, 0, 1, 0, 0.28734383, 0, -0.9578275, 140, -4, 0)
 
-[node name="Model" parent="Props/Camp_Boat_Water" unique_id=499908697 instance=ExtResource("9_v6ynp")]
+[node name="Model" parent="Props/Camp_Boat_Water" unique_id=1957553518 instance=ExtResource("9_v6ynp")]
 
-[node name="Camp_Hut" type="StaticBody3D" parent="Props" unique_id=12178146]
+[node name="Camp_Hut" type="StaticBody3D" parent="Props" unique_id=1691316680]
 transform = Transform3D(0.84799796, 0, 0.52999955, 0, 1, 0, -0.52999955, 0, 0.84799796, 190, -1.391424, 12)
 collision_mask = 0
 
-[node name="Shape" type="CollisionShape3D" parent="Props/Camp_Hut" unique_id=1327154657]
+[node name="Shape" type="CollisionShape3D" parent="Props/Camp_Hut" unique_id=161806776]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15999997, 1.76, 0.100000024)
 shape = SubResource("BoxShape3D_p21ll")
 
 [node name="Model" parent="Props/Camp_Hut" unique_id=2008783294 instance=ExtResource("10_8p8i6")]
 
-[node name="Camp_NetRack_1" type="Node3D" parent="Props" unique_id=748810109]
+[node name="Camp_NetRack_1" type="Node3D" parent="Props" unique_id=717243511]
 transform = Transform3D(-0.28734487, 0, -0.9578272, 0, 1, 0, 0.9578272, 0, -0.28734487, 170, -2.450806, 15)
 
 [node name="Model" parent="Props/Camp_NetRack_1" unique_id=1113375378 instance=ExtResource("11_2y6gq")]
 
-[node name="Camp_NetRack_2" type="Node3D" parent="Props" unique_id=1548181639]
+[node name="Camp_NetRack_2" type="Node3D" parent="Props" unique_id=2123173393]
 transform = Transform3D(0.19611691, 0, -0.9805805, 0, 1, 0, 0.9805805, 0, 0.19611691, 175, -1.6169038, 26)
 
-[node name="Model" parent="Props/Camp_NetRack_2" unique_id=1754597328 instance=ExtResource("11_2y6gq")]
+[node name="Model" parent="Props/Camp_NetRack_2" unique_id=2057171303 instance=ExtResource("11_2y6gq")]
