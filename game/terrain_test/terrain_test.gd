@@ -1,16 +1,21 @@
 extends Node3D
 ## Проба Terrain3D: рельеф карты в Terrain3D (собирает tools/make_terrain_test.gd)
 ## и машина игрока, чтобы покататься и сравнить с нынешним миром из чанков.
-## Дорог, леса, трафика здесь нет — только рельеф, вода и машина.
+## Дороги — часть рельефа (высоты и покрытие): грунтовки целиком, а у шоссе
+## поверх лежит лента асфальта вровень с землёй. Леса и трафика нет.
 ##   godot --path . res://game/terrain_test/terrain_test.tscn
 ## Отладка (после «--»): --drive — газ зажат сам, --at=x,z,угол — старт в
 ## другой точке, --shot=файл.png — снимок через 6 с и выход.
 
 const PLAYER_STATS := preload("res://game/cars/stats/player.tres")
 const START := Vector3(-220.0, 0.0, 85.0) ## PlayerStart из art/map/map.blend
+const TEX_DIRT := 2 ## номера текстур рельефа, как в tools/make_terrain_test.gd
+const TEX_ASPHALT := 3
+const DECK_LIFT_M := 0.03 ## лента шоссе над выровненным рельефом
 
 var car: ArcadeCar
 var camera: FollowCamera
+var _highways: Node3D
 var _fps: Label
 var _frame_ms: float = 0.0
 var _shot_path: String = ""
@@ -21,6 +26,7 @@ func _ready() -> void:
 	var terrain: Terrain3D = $Terrain3D
 	_build_environment()
 	_build_water()
+	_build_highways()
 
 	car = ArcadeCar.new()
 	car.name = "Player"
@@ -92,6 +98,64 @@ func _build_water() -> void:
 	water.mesh = plane
 	water.position.y = WorldDefs.WATER_LEVEL
 	add_child(water)
+
+
+## Асфальт шоссе — лента вровень с рельефом: ровная кромка и разметка из
+## текстуры шоссе, без юбок. Рельеф под лентой выровнен по её профилю, а в
+## середине чуть утоплен (tools/make_terrain_test.gd), чтобы не просвечивал.
+func _build_highways() -> void:
+	var index := WorldIndex.load_baked()
+	if index == null:
+		return
+	_highways = Node3D.new()
+	_highways.name = "Highways"
+	add_child(_highways)
+	var hw := WorldDefs.ROAD_WIDTHS[WorldDefs.RoadType.HIGHWAY] * 0.5
+	var lift := Vector3.UP * DECK_LIFT_M
+	for r in index.road_points.size():
+		if index.road_types[r] != WorldDefs.RoadType.HIGHWAY:
+			continue
+		var pts := index.road_points[r]
+		var verts := PackedVector3Array()
+		var normals := PackedVector3Array()
+		var uvs := PackedVector2Array()
+		var indices := PackedInt32Array()
+		var faces := PackedVector3Array()
+		var along := 0.0
+		for k in pts.size():
+			if k > 0:
+				along += pts[k].distance_to(pts[k - 1])
+			var t := pts[mini(k + 1, pts.size() - 1)] - pts[maxi(k - 1, 0)]
+			var right := Vector3(-t.z, 0.0, t.x).normalized() * hw
+			verts.append_array([pts[k] - right + lift, pts[k] + right + lift])
+			normals.append_array([Vector3.UP, Vector3.UP])
+			uvs.append_array([Vector2(0.0, along / 10.0), Vector2(1.0, along / 10.0)])
+			if k > 0:
+				var i := k * 2
+				indices.append_array([i - 2, i, i - 1, i - 1, i, i + 1])
+				faces.append_array([verts[i - 2], verts[i], verts[i - 1], verts[i - 1], verts[i], verts[i + 1]])
+		for node: Node in WorldMaterials.build_static(verts, normals, uvs, indices, faces,
+				WorldMaterials.shared().highway, WorldDefs.Surface.ASPHALT):
+			_highways.add_child(node)
+
+
+## Покрытие под машиной вне шоссе — из карты текстур рельефа: ArcadeCar читает
+## его из меты "surface" у тела под колесом, а у Terrain3D тело одно на весь
+## рельеф. У ленты шоссе мета своя.
+func _physics_process(_delta: float) -> void:
+	var terrain: Terrain3D = $Terrain3D
+	var pos := car.global_position
+	var surface := WorldDefs.Surface.GRASS
+	if not terrain.data.get_control_auto(pos):
+		var id := terrain.data.get_control_base_id(pos)
+		if id == TEX_ASPHALT:
+			surface = WorldDefs.Surface.ASPHALT
+		elif id == TEX_DIRT:
+			surface = WorldDefs.Surface.DIRT
+	var q := PhysicsRayQueryParameters3D.create(pos, pos + Vector3.DOWN * 3.0, ArcadeCar.LAYER_WORLD)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if not hit.is_empty() and (hit["collider"] as Node).get_parent() != _highways:
+		(hit["collider"] as Object).set_meta("surface", surface)
 
 
 func _build_hud() -> void:
