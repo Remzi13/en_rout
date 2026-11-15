@@ -1,6 +1,6 @@
 # Концепция игры
 
-Основной документ: что за игра «Отрыв» и что в ней главное. Остальные документы ему подчиняются: стиль — [visual-style.md](visual-style.md), масштаб — [scale.md](scale.md), планы — [roadmap.md](roadmap.md).
+Основной документ: что за игра «Отрыв» и что в ней главное. Остальные документы ему подчиняются: стиль — [visual-style.md](visual-style.md), масштаб — [scale.md](scale.md), планы — [roadmap.md](roadmap.md), первый этап — [vertical-slice.md](vertical-slice.md).
 
 ## Коротко
 
