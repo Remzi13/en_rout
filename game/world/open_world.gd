@@ -116,6 +116,7 @@ func _ready() -> void:
 	GameState.settings_changed.connect(apply_quality)
 	apply_quality()
 	loading = false
+	trip_stats.active = true
 	ready_to_play.emit()
 
 
@@ -225,6 +226,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Ставит игрока на ближайшую дорогу по направлению движения.
 func respawn_player() -> void:
 	_respawn_cooldown = 2.0
+	trip_stats.reset_track()
 	var near := roads.nearest_road(player.global_position)
 	if near.is_empty():
 		var p := player.global_position

@@ -4,8 +4,13 @@ extends RefCounted
 ## статистика поездок. Без зависимостей от сцены: время суток и погоду
 ## передаёт тот, кто добавляет запись (обычно TripStats).
 ##
-## Хранится в JSON (user://journal.json) с полем version. Пустой, битый или
-## старый файл не роняет игру: журнал начинается заново, в лог — предупреждение.
+## Хранится в JSON (user://journal.json) с полем version. Сохранение атомарное:
+## пишем в <path>.tmp и переименовываем поверх основного файла.
+## Пустой, битый, старый файл или поля неверного типа не роняют игру: файл
+## откладывается рядом как journal.bad.json (перезаписывая прошлый), журнал
+## начинается заново, в лог — предупреждение. Журнал из будущей версии не
+## стирается: откладывается как journal.v<N>.json. Отдельные негодные записи
+## и места (не строки) при чтении просто отбрасываются.
 ## add_entry и open_place сразу сохраняют файл; статистику сохраняет TripStats
 ## раз в AUTOSAVE_S и при выходе.
 
@@ -56,19 +61,37 @@ static func load_or_new(file_path: String = PATH) -> Journal:
 	# JSON.new().parse не печатает ERROR на битом файле, в отличие от parse_string.
 	var json := JSON.new()
 	var parsed: Variant = json.data if json.parse(text) == OK else null
-	if not parsed is Dictionary or int((parsed as Dictionary).get("version", 0)) != VERSION:
-		push_warning("Журнал %s повреждён или устарел — начинаем заново" % file_path)
+	var v: Variant = (parsed as Dictionary).get("version") if parsed is Dictionary else null
+	if _is_num(v) and float(v) == floorf(float(v)) and int(v) > VERSION:
+		var future := _side_path(file_path, ".v%d.json" % int(v))
+		push_warning("Журнал %s из новой версии (%d) — отложен в %s, начинаем заново" % [file_path, int(v), future])
+		_move_aside(file_path, future)
 		return j
-	j._from_dict(parsed)
+	if not (_is_num(v) and float(v) == VERSION) or not j._from_dict(parsed):
+		var bad := _side_path(file_path, ".bad.json")
+		push_warning("Журнал %s повреждён или устарел — отложен в %s, начинаем заново" % [file_path, bad])
+		_move_aside(file_path, bad)
+		j = Journal.new()
+		j.path = file_path
 	return j
 
 
+## Сохраняет атомарно: <path>.tmp, затем переименование поверх основного.
 func save() -> bool:
-	var f := FileAccess.open(path, FileAccess.WRITE)
+	var tmp := path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
 		push_warning("Не удалось сохранить журнал %s" % path)
 		return false
 	f.store_string(JSON.stringify(to_dict(), "  "))
+	var write_ok := f.get_error() == OK
+	f.close()
+	if not write_ok:
+		push_warning("Не удалось записать журнал %s" % tmp)
+		return false
+	if DirAccess.rename_absolute(_abs(tmp), _abs(path)) != OK:
+		push_warning("Не удалось заменить журнал %s" % path)
+		return false
 	return true
 
 
@@ -164,23 +187,64 @@ func to_dict() -> Dictionary:
 	}
 
 
-func _from_dict(d: Dictionary) -> void:
-	var list: Variant = d.get("entries")
-	if list is Array:
-		for e: Variant in list:
-			if e is Dictionary:
-				entries.append(e)
-	var ids: Variant = d.get("places")
-	if ids is Array:
-		for id: Variant in ids:
-			places[str(id)] = true
-	var s: Variant = d.get("stats")
-	if s is Dictionary:
-		distance_m = _num(s.get("distance_m"))
-		drive_time_s = _num(s.get("drive_time_s"))
-		rain_distance_m = _num(s.get("rain_distance_m"))
-		night_distance_m = _num(s.get("night_distance_m"))
+## Заполняет журнал из словаря файла; false — поля неверного типа (файл негодный).
+## Записи без строковых kind/text и места не строками отбрасываются.
+func _from_dict(d: Dictionary) -> bool:
+	var list: Variant = d.get("entries", [])
+	var ids: Variant = d.get("places", [])
+	var s: Variant = d.get("stats", {})
+	if not list is Array or not ids is Array or not s is Dictionary:
+		return false
+	for key: String in ["distance_m", "drive_time_s", "rain_distance_m", "night_distance_m"]:
+		if not _is_num((s as Dictionary).get(key, 0.0)):
+			return false
+	for e: Variant in list:
+		if not e is Dictionary:
+			continue
+		var ed := e as Dictionary
+		if typeof(ed.get("kind")) != TYPE_STRING or typeof(ed.get("text")) != TYPE_STRING:
+			continue
+		var w: Variant = ed.get("weather", "")
+		var ut: Variant = ed.get("unix_time", 0)
+		var date: Variant = ed.get("date", "")
+		entries.append({
+			"kind": ed["kind"],
+			"text": ed["text"],
+			"hour": _num(ed.get("hour")),
+			"weather": w if typeof(w) == TYPE_STRING else "",
+			"unix_time": int(ut) if _is_num(ut) else 0,
+			"date": date if typeof(date) == TYPE_STRING else "",
+		})
+	for id: Variant in ids:
+		if typeof(id) == TYPE_STRING:
+			places[id] = true
+	distance_m = _num(s.get("distance_m"))
+	drive_time_s = _num(s.get("drive_time_s"))
+	rain_distance_m = _num(s.get("rain_distance_m"))
+	night_distance_m = _num(s.get("night_distance_m"))
+	return true
+
+
+static func _is_num(v: Variant) -> bool:
+	return typeof(v) == TYPE_FLOAT or typeof(v) == TYPE_INT
 
 
 static func _num(v: Variant) -> float:
-	return float(v) if v is float or v is int else 0.0
+	return float(v) if _is_num(v) else 0.0
+
+
+static func _abs(p: String) -> String:
+	return ProjectSettings.globalize_path(p)
+
+
+## user://journal.json + ".bad.json" → user://journal.bad.json.
+static func _side_path(file_path: String, suffix: String) -> String:
+	return file_path.get_basename() + suffix
+
+
+## Откладывает файл в сторону, перезаписывая прежний с тем же именем.
+static func _move_aside(from: String, to: String) -> void:
+	if FileAccess.file_exists(to):
+		DirAccess.remove_absolute(_abs(to))
+	if DirAccess.rename_absolute(_abs(from), _abs(to)) != OK:
+		push_warning("Не удалось отложить журнал %s в %s" % [from, to])

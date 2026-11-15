@@ -50,5 +50,6 @@ func _run() -> void:
 			var again := Journal.load_or_new(PATH)
 			ok = ok and is_equal_approx(again.distance_m, j.distance_m)
 		H.check("журнал не падает: " + name, ok, "км %.3f, записей %d, мест %d" % [j.distance_m / 1000.0, j.entries.size(), j.places_count()] if j != null else "null")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
+	for p in [PATH, "user://test_journal_broken.bad.json", "user://test_journal_broken.v2.json"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 	H.finish(self)

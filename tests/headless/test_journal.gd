@@ -2,11 +2,17 @@ extends SceneTree
 ## Бортовой журнал без сцены: запись и чтение файла, битый и пустой файл,
 ## старая версия, повторное открытие места, сигнал entry_added, подсчёт
 ## статистики (км, дождь, ночь) счётчиком TripStats на подставных данных.
+## Атомарное сохранение (.tmp), битый файл откладывается в .bad.json, журнал
+## будущей версии — в .v<N>.json; мусорные записи и места отбрасываются;
+## TripStats не считает до готовности мира, стоянку, вертикаль и респаун.
 ## Пишет только в user://test_journal*.json и удаляет за собой.
 
 const H := preload("res://tests/headless/helper.gd")
 const DT := 1.0 / 60.0
 const PATH := "user://test_journal.json"
+const BAD_PATH := "user://test_journal.bad.json"
+const V2_PATH := "user://test_journal.v2.json"
+const TMP_PATH := "user://test_journal.json.tmp"
 
 # Weather и TripStats обращаются к автозагрузке GameState, которую -s скрипт
 # не видит при компиляции, — грузим их в рантайме.
@@ -16,6 +22,12 @@ var TripStatsScript: GDScript
 
 func _initialize() -> void:
 	_run()
+
+
+func _write(text: String) -> void:
+	var f := FileAccess.open(PATH, FileAccess.WRITE)
+	f.store_string(text)
+	f.close()
 
 
 func _run() -> void:
@@ -49,6 +61,13 @@ func _run() -> void:
 	var weather = WeatherScript.new()
 	var ts = TripStatsScript.new()
 	ts.setup(j, car, weather, null)
+	# До готовности мира (active) не считаем ничего.
+	car.position.x += 1.0
+	ts.tick(DT)
+	car.position.x += 1.0
+	ts.tick(DT)
+	H.check("до готовности мира статистика не идёт", j.distance_m == 0.0 and j.drive_time_s == 0.0)
+	ts.active = true
 	var gs: Node = root.get_node("GameState")
 	for phase in ["day", "rain", "night"]:
 		weather.rain_k = 1.0 if phase == "rain" else 0.0
@@ -69,6 +88,29 @@ func _run() -> void:
 	for i in int(16.0 / DT):
 		ts.tick(DT)
 	H.check("автосохранение раз в 45 с", ts._since_save_s < 5.0)
+	H.check("после сохранения нет .tmp", not FileAccess.file_exists(TMP_PATH))
+
+	# Стоянка, вертикаль, респаун.
+	var d_before := j.distance_m
+	var t_before := j.drive_time_s
+	for i in 120:
+		ts.tick(DT)
+	H.check("на стоянке время за рулём не идёт", is_equal_approx(j.drive_time_s, t_before),
+		"+%.2f с" % (j.drive_time_s - t_before))
+	for i in 60:
+		car.position.y -= 10.0 * DT
+		ts.tick(DT)
+	H.check("падение по вертикали не даёт метров", is_equal_approx(j.distance_m, d_before),
+		"+%.2f м" % (j.distance_m - d_before))
+	ts.reset_track()
+	car.position.z += 30.0
+	ts.tick(DT)
+	H.check("респаун (reset_track) не даёт метров", is_equal_approx(j.distance_m, d_before),
+		"+%.2f м" % (j.distance_m - d_before))
+	car.position.z += 30.0
+	ts.tick(DT)
+	H.check("рывок 30 м без респауна засчитан (запасной порог 50 м)", absf(j.distance_m - d_before - 30.0) < 0.01)
+	j.distance_m = d_before
 
 	# Чтение с диска.
 	j.save()
@@ -83,15 +125,38 @@ func _run() -> void:
 	# Битый, пустой и старый файл — журнал заново, без падения.
 	for bad in ["{ это не json", "{}", "", "[1, 2]", "{\"version\": 0, \"entries\": [{\"text\": \"x\"}]}",
 			"{\"version\": 1, \"entries\": 5, \"places\": {\"a\": 1}, \"stats\": {\"distance_m\": \"много\"}}"]:
-		var f := FileAccess.open(PATH, FileAccess.WRITE)
-		f.store_string(bad)
-		f.close()
+		_write(bad)
 		var jb := Journal.load_or_new(PATH)
 		H.check("негодный файл → пустой журнал: %s" % bad.left(24),
 			jb != null and jb.entries.is_empty() and jb.places_count() == 0 and jb.distance_m == 0.0)
 
+	# Битый файл откладывается в .bad.json (перезаписывая прежний).
+	_write("{ битый 1")
+	Journal.load_or_new(PATH)
+	_write("{ битый 2")
+	var jbad := Journal.load_or_new(PATH)
+	H.check("битый файл отложен в .bad.json", FileAccess.file_exists(BAD_PATH)
+		and FileAccess.get_file_as_string(BAD_PATH) == "{ битый 2" and not FileAccess.file_exists(PATH))
+	H.check("после битого файла журнал пишется заново", jbad.save() and Journal.load_or_new(PATH).entries.is_empty())
+
+	# Мусорные записи и места отбрасываются, остальное читается.
+	_write("{\"version\": 1, \"entries\": [{\"kind\": 5, \"text\": \"a\"}, {\"kind\": \"delivery\", \"text\": null},"
+		+ " {\"kind\": \"delivery\", \"text\": \"ok\", \"hour\": \"вечер\"}], \"places\": [{\"x\": 1}, 7, null, \"hill\"]}")
+	var jm := Journal.load_or_new(PATH)
+	H.check("негодные записи отброшены", jm.entries.size() == 1 and jm.deliveries_count() == 1
+		and jm.entries[0]["hour"] is float, "записей %d" % jm.entries.size())
+	H.check("в places только строки", jm.places_count() == 1 and jm.is_place_open("hill"))
+
+	# Журнал будущей версии не стирается.
+	_write("{\"version\": 2, \"stats\": {\"distance_m\": 5000}}")
+	var jf := Journal.load_or_new(PATH)
+	H.check("журнал v2 отложен в .v2.json, начат новый", jf.distance_m == 0.0 and FileAccess.file_exists(V2_PATH)
+		and FileAccess.get_file_as_string(V2_PATH).contains("5000"))
+
 	Journal.reset(PATH)
 	H.check("reset удаляет сохранение", not Journal.has_save(PATH))
+	for extra in [BAD_PATH, V2_PATH, TMP_PATH]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(extra))
 	ts.free()
 	weather.free()
 	car.queue_free()

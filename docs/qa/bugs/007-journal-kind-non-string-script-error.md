@@ -1,7 +1,7 @@
 # 007. Запись журнала с `kind` не строкой — SCRIPT ERROR в `deliveries_count`
 
 - **Серьёзность:** minor (только руками испорченный файл, но игра сыплет ошибками при каждом `stats()`)
-- **Статус:** открыт. Задача 2, `game/core/journal.gd`.
+- **Статус:** исправлено, ветка fix-journal. Задача 2, `game/core/journal.gd`.
 
 ## Шаги
 `tests/run_all.sh test_journal_broken`, случай «kind и hour числом/строкой»: файл
