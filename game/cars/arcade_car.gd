@@ -2,6 +2,10 @@ class_name ArcadeCar
 extends RigidBody3D
 ## Аркадная машина открытого мира: лучевая подвеска на 4 колеса, тяга,
 ## торможение, боковое сцепление и поворот по кинематике колёсной базы.
+## Лучи подвески идут из точек на ride_height_m выше подошвы колеса: в покое
+## пружина держит ровно эту высоту, и колёса стоят на земле.
+## Угол руля на скорости ограничен боковым ускорением (max_lateral_accel_mps2),
+## поэтому машина поворачивает по дуге, а не срывается боком; занос — ручником.
 ## Сцепление зависит от поверхности под каждым колесом и от погоды
 ## (GameState.weather_grip). Ручник срывает заднюю ось в управляемый занос.
 ## Управление одинаково для игрока и ИИ: driver заполняет CarControls.
@@ -17,6 +21,7 @@ const SURFACE_GRIP := [1.0, 0.78, 0.62] ## асфальт, грунт, трав�
 const SURFACE_SPEED := [1.0, 0.86, 0.7]
 const SURFACE_DRAG := [0.0, 1.0, 2.5] ## доп. замедление, м/с²
 const SUSPENSION_EXTRA_RAY_M := 0.35
+const LEAN_HEIGHT_M := 0.25 ## плечо крена и клевка кузова от ускорений
 const STOP_SPEED_MPS := 0.3
 const IMPACT_DV_MPS := 4.0
 const FLIP_TIMEOUT_S := 2.5
@@ -56,7 +61,8 @@ var auto_respawn: bool = true
 
 var _mounts: Array[Vector3] = []
 var _wheel_dist := PackedFloat32Array()
-var _rest_length: float = 0.6
+var _ride_m: float = 0.3 ## высота крепления луча над подошвой колеса в покое
+var _rest_length: float = 0.6 ## свободная длина пружины (ниже колесо не опускается)
 var _prev_velocity := Vector3.ZERO
 var _flip_time: float = 0.0
 var _water_time: float = 0.0
@@ -85,10 +91,12 @@ func _ready() -> void:
 
 	var bs := stats.scaled_size()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(bs.x, bs.y * 0.8, bs.z)
+	# Коробка только на верхней части кузова: низ на 0,45 высоты над подошвой
+	# колёс, чтобы ступеньки полотна брала подвеска, а не кузов.
+	shape.size = Vector3(bs.x, bs.y * 0.55, bs.z)
 	var cs := CollisionShape3D.new()
 	cs.shape = shape
-	cs.position.y = bs.y * 0.1
+	cs.position.y = bs.y * 0.225
 	add_child(cs)
 
 	model = MODEL_SCENE.instantiate() as CarModel
@@ -97,13 +105,14 @@ func _ready() -> void:
 	model.size = bs
 	model.unit = CarStats.SCALE
 	add_child(model)
+	_ride_m = stats.ride_height_m * CarStats.SCALE
 	for p in model.wheel_positions():
-		_mounts.append(Vector3(p.x, -bs.y * 0.5 + 0.05, p.z))
+		_mounts.append(Vector3(p.x, -bs.y * 0.5 + _ride_m, p.z))
 	_wheel_dist.resize(_mounts.size())
-	_wheel_dist.fill(stats.ride_height_m * CarStats.SCALE)
+	_wheel_dist.fill(_ride_m)
 	var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 	var static_load := mass * (gravity + stats.extra_gravity_mps2) / _mounts.size()
-	_rest_length = stats.ride_height_m * CarStats.SCALE + static_load / stats.suspension_stiffness
+	_rest_length = _ride_m + static_load / stats.suspension_stiffness
 
 	if with_headlights:
 		for sx in [-1.0, 1.0]:
@@ -141,7 +150,7 @@ func _physics_process(delta: float) -> void:
 	var drop := PackedFloat32Array()
 	drop.resize(_wheel_dist.size())
 	for i in _wheel_dist.size():
-		drop[i] = _wheel_dist[i] - _rest_length + 0.1
+		drop[i] = minf(_wheel_dist[i], _rest_length) - _ride_m
 	model.update_wheels(steer_angle_deg, drop, v * delta / model.wheel_radius())
 	model.set_brake(controls.brake > 0.1 and v > 1.0)
 	_update_lights()
@@ -217,9 +226,17 @@ func _update_suspension() -> void:
 		on_road = road_wheels * 2 >= grounded_wheels
 
 
-func _update_steer(v: float, delta: float) -> void:
-	var t := clampf(absf(v) / (stats.max_speed_kmh / MPS_TO_KMH), 0.0, 1.0)
-	var max_angle := lerpf(stats.max_steer_angle_deg, stats.min_steer_angle_deg, sqrt(t))
+## Предельный угол руля на текущей скорости: больше него шины не удержат,
+## и машину понесёт боком.
+func max_steer_deg() -> float:
+	var v := get_forward_speed()
+	var a_lat := stats.max_lateral_accel_mps2 * surface_grip * GameState.weather_grip
+	var by_speed := rad_to_deg(atan(a_lat * stats.wheelbase_m / maxf(v * v, 1.0)))
+	return minf(stats.max_steer_angle_deg, by_speed)
+
+
+func _update_steer(_v: float, delta: float) -> void:
+	var max_angle := max_steer_deg()
 	var target := controls.steer * max_angle
 	var returning := absf(target) < absf(steer_angle_deg) or signf(target) != signf(steer_angle_deg)
 	var rate := stats.steer_return_speed_deg_s if returning else stats.steer_speed_deg_s
@@ -244,6 +261,9 @@ func _apply_drive(v: float, delta: float) -> void:
 	if controls.handbrake:
 		accel -= signf(v) * minf(stats.handbrake_decel_mps2, absf(v) / delta)
 	apply_central_force(forward * accel * mass)
+	# Вес: кузов приседает на разгоне, клюёт на торможении и кренится наружу в повороте.
+	var a_right := -v * angular_velocity.dot(up)
+	apply_torque((right * accel + forward * a_right) * mass * LEAN_HEIGHT_M * CarStats.SCALE)
 
 	var grip := stats.lateral_grip * surface_grip * GameState.weather_grip
 	if controls.handbrake:
@@ -267,7 +287,8 @@ func _apply_drive(v: float, delta: float) -> void:
 		yaw *= stats.drift_yaw_factor
 	var cur_yaw := angular_velocity.dot(up)
 	# При заносе вращение не мгновенное — машину можно «ловить» контррулём.
-	var yaw_follow := 1.0 if not (controls.handbrake or drifting) else 1.0 - exp(-6.0 * delta)
+	var yaw_rate := 6.0 if controls.handbrake or drifting else stats.yaw_response
+	var yaw_follow := 1.0 - exp(-yaw_rate * delta)
 	angular_velocity += up * (lerpf(cur_yaw, yaw, yaw_follow) - cur_yaw)
 
 

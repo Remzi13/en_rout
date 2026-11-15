@@ -3,11 +3,17 @@ extends RefCounted
 ## Общие вычисления для ИИ-водителей.
 
 
-## Руль -1..1, чтобы ехать в точку target (в мировых координатах).
+## Руль -1..1, чтобы ехать в точку target (в мировых координатах): дуга
+## через точку даёт нужный угол колёс, он делится на доступный на этой
+## скорости. Руль в упоре (±1) значит, что на такой скорости не вписаться.
 static func steer_to(car: ArcadeCar, target: Vector3, gain: float = 1.6) -> float:
 	var local := car.global_transform.affine_inverse() * target
 	var angle := atan2(local.x, -local.z)
-	return clampf(angle * gain, -1.0, 1.0)
+	var dist := maxf(Vector2(local.x, local.z).length(), 1.0)
+	var wheel_deg := rad_to_deg(atan(car.stats.wheelbase_m * 2.0 * sin(angle) / dist))
+	if absf(angle) > PI * 0.5:
+		wheel_deg = signf(angle) * car.stats.max_steer_angle_deg
+	return clampf(wheel_deg * gain / car.max_steer_deg(), -1.0, 1.0)
 
 
 ## Регулятор скорости: заполняет газ/тормоз, чтобы держать target_mps.

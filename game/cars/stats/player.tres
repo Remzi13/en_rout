@@ -5,5 +5,4 @@
 [resource]
 script = ExtResource("1")
 max_speed_kmh = 210.0
-acceleration_mps2 = 14.0
-lateral_grip = 7.5
+acceleration_mps2 = 9.5
