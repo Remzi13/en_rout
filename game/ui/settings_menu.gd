@@ -30,7 +30,7 @@ func _ready() -> void:
 		func(i: int) -> void: GameState.draw_distance = i + 1)
 
 	v.add_child(UiTheme.label("Управление (клавиатура)", 24))
-	for pair in GameState.REBINDABLE_ACTIONS:
+	for pair in _actions():
 		var row := HBoxContainer.new()
 		var l := UiTheme.label(pair[1], 20)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -49,6 +49,21 @@ func _ready() -> void:
 	v.add_child(reset)
 	v.add_child(UiTheme.button("Назад", _close))
 	_refresh_keys()
+
+
+## Действия для переназначения: из GameState плюс interact (взять / сдать
+## доставку) перед «Паузой», если GameState его ещё не перечисляет.
+static func _actions() -> Array:
+	var list: Array = GameState.REBINDABLE_ACTIONS.duplicate()
+	for pair: Array in list:
+		if pair[0] == "interact":
+			return list
+	var at := list.size()
+	for i in list.size():
+		if list[i][0] == "pause":
+			at = i
+	list.insert(at, ["interact", "Действие: взять / сдать"])
+	return list
 
 
 func focus_first() -> void:
