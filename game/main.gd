@@ -2,7 +2,8 @@ extends Node
 ## Точка входа (game/main.tscn): главное меню, настройки, запуск сессии
 ## в открытом мире и меню паузы. «Продолжить» видно, только когда есть
 ## сохранение журнала; «Новая игра» при сохранении спрашивает подтверждение
-## и стирает его.
+## и стирает его. Карта-схема (MapScreen, действие map) живёт, пока есть мир,
+## и сама ставит игру на паузу.
 
 ## Сид для отладочного --autostart: одинаковые погода и трафик от запуска к запуску.
 const AUTOSTART_SEED := 1
@@ -13,6 +14,7 @@ var _screen: Control
 var _confirm: Control
 var _paused_ui: Control
 var _loading: Label
+var _map: MapScreen
 
 
 func _ready() -> void:
@@ -267,6 +269,10 @@ func _start_game(seed_value: int) -> void:
 		await world.ready_to_play
 	_clear_screen()
 	get_tree().paused = false
+	_map = MapScreen.new()
+	_map.name = "Map"
+	_ui.add_child(_map)
+	_map.setup(WorldIndex.load_baked(), world.player, world.places, world.deliveries)
 	# Отладка: --autopilot — машина игрока едет по дорогам сама, --chase — сразу погоня.
 	var args := OS.get_cmdline_user_args()
 	if "--autopilot" in args:
@@ -328,6 +334,9 @@ func _resume() -> void:
 
 func _to_menu() -> void:
 	_resume()
+	if _map != null:
+		_map.queue_free()
+		_map = null
 	if world != null:
 		world.queue_free()
 		world = null
