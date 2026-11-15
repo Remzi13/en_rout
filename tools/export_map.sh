@@ -6,7 +6,7 @@
 #    места Places и точки доставок Spots
 #    (tools/blender/export_map.py -> art/map/export/);
 # 2) Godot режет карту на чанки (tools/bake_world.gd -> game/world/chunks/,
-#    world.tscn, world_index.tres). Чанки перезаписываются целиком.
+#    world.tscn, world_index.tres, подложка карты map_base.png). Чанки перезаписываются целиком.
 # Godot запускается с окном: в headless растительность не сохраняется.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -27,3 +27,5 @@ fi
 echo "$out" | grep -E "Экспорт|Внимание" || true
 "$GODOT" --headless --path . --import >/dev/null 2>&1
 "$GODOT" --path . -s res://tools/bake_world.gd 2>&1 | grep -vE "^(Godot Engine|OpenGL|Vulkan)|V-Sync|set_use_vsync|^$"
+# Импорт новой подложки карты (game/world/map_base.png).
+"$GODOT" --headless --path . --import >/dev/null 2>&1

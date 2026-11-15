@@ -6,7 +6,8 @@ extends SceneTree
 ##   2. godot --path . -s res://tools/bake_world.gd   (этот скрипт)
 ##      -> game/world/chunks/chunk_X_Z.tscn + рельеф (*.res),
 ##         game/world/world.tscn (все чанки вместе, для обзора),
-##         game/world/world_index.tres (что грузит игра, см. WorldIndex).
+##         game/world/world_index.tres (что грузит игра, см. WorldIndex),
+##         game/world/map_base.png (подложка карты-схемы, tools/map_base.gd).
 ##
 ## Что делает: собирает из линий дорог сеть (концы ближе NODE_MERGE_M — один
 ## узел, конец у середины другой дороги — Т-перекрёсток), кладёт дороги на
@@ -25,6 +26,7 @@ const MaterialBuilder := preload("res://tools/material_builder.gd")
 const MapProps := preload("res://tools/map_props.gd")
 const MapPlaces := preload("res://tools/map_places.gd")
 const MapClearings := preload("res://tools/map_clearings.gd")
+const MapBase := preload("res://tools/map_base.gd")
 const EXPORT_DIR := "res://art/map/export/"
 const ASSETS := "res://game/world/assets/"
 const CHUNKS := "res://game/world/chunks/"
@@ -110,6 +112,7 @@ func _run() -> void:
 	print("чанков: %d" % coords.size())
 	_bake_world(coords)
 	print("мир сохранён: %s" % WORLD_SCENE)
+	_bake_map_base(coords)
 	quit(0)
 
 
@@ -804,6 +807,16 @@ func _terrain_arrays(cc: Vector2i) -> Dictionary:
 				k += 1
 	return {"vertices": verts, "normals": normals, "colors": colors, "indices": indices,
 		"faces": faces, "water": min_h < WATER_LEVEL + 0.5}
+
+
+## Подложка карты-схемы (tools/map_base.gd) по рельефу после продавливания дорог.
+func _bake_map_base(coords: Array[Vector2i]) -> void:
+	var grid := {"hgt": _hgt, "forest": _forest, "conifer": _conifer, "w": _gw, "h": _gh,
+		"x0": _x0, "z0": _z0, "step": GRID_STEP}
+	var img := MapBase.render(grid, WorldDefs.rect_of_chunks(coords))
+	var err := img.save_png(MapBase.PATH)
+	assert(err == OK)
+	print("подложка карты: %s, %d × %d" % [MapBase.PATH, img.get_width(), img.get_height()])
 
 
 ## Растительность чанка по маскам из Blender (forest, conifer, rocks),
