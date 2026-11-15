@@ -13,7 +13,8 @@ extends SceneTree
 ## рельеф (сглаженный профиль, ограничение уклона), продавливает под ними
 ## землю, красит рельеф, расставляет растительность по маскам из Blender,
 ## ставит объекты из коллекции Props (tools/map_props.gd, docs/map-pipeline.md)
-## и режет всё на чанки по 256 м. Места и точки доставок (Places, Spots,
+## и режет всё на чанки по 256 м. Вокруг объектов и точек доставок
+## растительность не ставится — прогалины, tools/map_clearings.gd. Места и точки доставок (Places, Spots,
 ## tools/map_places.gd) идут только в world_index.tres, высота — по рельефу.
 ##
 ## Чанки ПЕРЕЗАПИСЫВАЮТСЯ целиком: карта правится в Blender, а не в сценах.
@@ -23,6 +24,7 @@ extends SceneTree
 const MaterialBuilder := preload("res://tools/material_builder.gd")
 const MapProps := preload("res://tools/map_props.gd")
 const MapPlaces := preload("res://tools/map_places.gd")
+const MapClearings := preload("res://tools/map_clearings.gd")
 const EXPORT_DIR := "res://art/map/export/"
 const ASSETS := "res://game/world/assets/"
 const CHUNKS := "res://game/world/chunks/"
@@ -66,6 +68,7 @@ var _start := Transform3D()
 var _props: Dictionary = {} ## чанк -> [объект из MapProps.parse]
 var _places: Array[Dictionary] = [] ## MapPlaces.parse, для WorldIndex.places
 var _spots: Array[Dictionary] = [] ## MapPlaces.parse, для WorldIndex.spots
+var _clearings: Array[Dictionary] = [] ## MapClearings: без растительности
 
 
 func _initialize() -> void:
@@ -93,6 +96,7 @@ func _run() -> void:
 	var rect := Rect2(_x0, _z0, _chunks_n.x * CS, _chunks_n.y * CS)
 	_places = MapPlaces.parse(data.get("places", []), "Places", MapPlaces.PLACE_RADIUS_M, ground, rect)
 	_spots = MapPlaces.parse(data.get("spots", []), "Spots", MapPlaces.SPOT_RADIUS_M, ground, rect)
+	_clearings.append_array(MapClearings.from_spots(_spots))
 	print("дорог: %d участков, узлов: %d, объектов: %d, мест: %d, точек: %d" % [
 		_roads.size(), _nodes.size(), props, _places.size(), _spots.size()])
 
@@ -613,6 +617,7 @@ static func _make_curve(pts: PackedVector3Array, tangents: PackedVector3Array, o
 ## пропускаются. Возвращает, сколько объектов попало в чанки.
 func _group_props(src: Variant) -> int:
 	_props.clear()
+	_clearings.clear()
 	if not src is Array:
 		return 0
 	var rect := Rect2(_x0, _z0, _chunks_n.x * CS, _chunks_n.y * CS)
@@ -626,6 +631,7 @@ func _group_props(src: Variant) -> int:
 		if not _props.has(cc):
 			_props[cc] = []
 		_props[cc].append(prop)
+		_clearings.append_array(MapClearings.from_props([prop]))
 		n += 1
 	return n
 
@@ -800,7 +806,8 @@ func _terrain_arrays(cc: Vector2i) -> Dictionary:
 		"faces": faces, "water": min_h < WATER_LEVEL + 0.5}
 
 
-## Растительность чанка по маскам из Blender (forest, conifer, rocks).
+## Растительность чанка по маскам из Blender (forest, conifer, rocks),
+## кроме прогалин вокруг объектов и точек доставок.
 func _vegetation(cc: Vector2i) -> Dictionary:
 	var conifer: Array[Transform3D] = []
 	var leafy: Array[Transform3D] = []
@@ -809,6 +816,7 @@ func _vegetation(cc: Vector2i) -> Dictionary:
 	var steps := int(CS / VEG_STEP)
 	var x0 := cc.x * CS
 	var z0 := cc.y * CS
+	var clear := MapClearings.near(_clearings, Rect2(x0, z0, CS, CS))
 	for j in steps:
 		for i in steps:
 			var gi := cc.x * steps + i
@@ -821,6 +829,8 @@ func _vegetation(cc: Vector2i) -> Dictionary:
 			if h < WATER_LEVEL + 1.2:
 				continue
 			if _sample(_edge_dist, wx, wz) < 4.0:
+				continue
+			if MapClearings.blocked(clear, wx, wz):
 				continue
 			var slope := absf(_sample(_hgt, wx + 2.0, wz) - _sample(_hgt, wx - 2.0, wz)) / 4.0 \
 				+ absf(_sample(_hgt, wx, wz + 2.0) - _sample(_hgt, wx, wz - 2.0)) / 4.0

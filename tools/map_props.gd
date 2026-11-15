@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## Запись в map.json (её пишет tools/blender/export_map.py, оси уже Godot):
 ##   {name, model: "res://...glb", pos: [x, y, z], yaw: рад, scale: [x, y, z],
-##    snap_to_ground: bool, collision: "box" | "none"}
+##    snap_to_ground: bool, collision: "box" | "none", clear_radius?: м}
 ## Узел объекта: StaticBody3D (collision = box; коробка по AABB модели, слой
 ## мира) или Node3D (collision = none), внутри — экземпляр модели «Model».
 ## У узла объекта только положение и поворот: масштаб пустышки ложится на
@@ -17,7 +17,8 @@ const LAYER_WORLD := WorldDefs.LAYER_WORLD
 ## Проверяет записи из map.json. Плохие и с неизвестной моделью —
 ## предупреждение и пропуск. Результат: [{name, scene: PackedScene,
 ## transform (глобальный, без масштаба; высота — пустышки), scale: Vector3,
-## snap: bool, collision: String}].
+## snap: bool, collision: String, clear_radius: м прогалины вокруг габаритов,
+## −1 — по умолчанию (tools/map_clearings.gd)}].
 static func parse(list: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for item: Variant in list:
@@ -46,6 +47,15 @@ static func parse(list: Array) -> Array[Dictionary]:
 		var collision := str(d.get("collision", "box"))
 		if collision != "none":
 			collision = "box"
+		var clear := -1.0
+		var cr: Variant = d.get("clear_radius")
+		if cr is float or cr is int:
+			clear = float(cr)
+			if clear < 0.0:
+				push_warning("Props/%s: clear_radius < 0 — беру по умолчанию" % pname)
+				clear = -1.0
+		elif cr != null:
+			push_warning("Props/%s: clear_radius не число — беру по умолчанию" % pname)
 		out.append({
 			"name": pname.validate_node_name(),
 			"scene": scene,
@@ -53,6 +63,7 @@ static func parse(list: Array) -> Array[Dictionary]:
 			"scale": scale,
 			"snap": bool(d.get("snap_to_ground", false)),
 			"collision": collision,
+			"clear_radius": clear,
 		})
 	return out
 
@@ -94,6 +105,16 @@ static func build(prop: Dictionary, origin: Vector3, ground: Callable) -> Node3D
 	node.transform = Transform3D(xf.basis, xf.origin - origin)
 	node.add_child(model)
 	return node
+
+
+## Габариты модели объекта с масштабом, в координатах узла объекта
+## (без поворота и положения — их даёт prop["transform"]).
+static func footprint(prop: Dictionary) -> AABB:
+	var model: Node3D = (prop["scene"] as PackedScene).instantiate()
+	model.scale = prop.get("scale", Vector3.ONE)
+	var box := model_aabb(model)
+	model.free()
+	return box
 
 
 ## AABB всех мешей модели в координатах её родителя (узел может быть вне дерева).

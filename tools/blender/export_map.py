@@ -218,7 +218,7 @@ def export_props():
         if collision not in ("box", "none"):
             print("Внимание: Props/%s: collision=%s, считаю box" % (obj.name, collision))
             collision = "box"
-        props.append({
+        item = {
             "name": obj.name,
             "model": model,
             # Оси: Godot (x, y, z) = Blender (x, z, -y); поворот вокруг Z
@@ -228,7 +228,18 @@ def export_props():
             "scale": [round(sx, 4), round(sz, 4), round(sy, 4)],
             "snap_to_ground": bool(obj.get("snap_to_ground", False)),
             "collision": collision,
-        })
+        }
+        # Прогалина вокруг объекта (м); нет свойства — отступ по умолчанию при запекании.
+        if "clear_radius" in obj.keys():
+            try:
+                clear = float(obj["clear_radius"])
+            except (TypeError, ValueError):
+                clear = -1.0
+            if clear < 0.0:
+                print("Внимание: Props/%s: плохой clear_radius, беру по умолчанию" % obj.name)
+            else:
+                item["clear_radius"] = round(clear, 3)
+        props.append(item)
     return props
 
 
