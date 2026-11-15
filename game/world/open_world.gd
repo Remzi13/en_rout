@@ -2,7 +2,8 @@ class_name OpenWorld
 extends Node3D
 ## Игровая сессия в открытом мире: окружение и свет, мир из сцен-чанков
 ## (подгружаются вокруг игрока, см. ChunkStreamer), машина игрока, камера,
-## трафик, погони, сутки и погода, HUD. Создаётся из main.gd через
+## трафик, погони, сутки и погода, HUD, бортовой журнал (journal) и счётчик
+## поездки (trip_stats). Создаётся из main.gd через
 ## OpenWorld.create(seed); готовность — сигнал ready_to_play (стартовые чанки
 ## грузятся несколько кадров). Сид влияет на трафик, погони и погоду, сам
 ## мир — фиксированный.
@@ -25,6 +26,11 @@ var chase: ChaseDirector
 var day_night: DayNight
 var weather: Weather
 var hud: GameHud
+## Бортовой журнал игрока; грузится из journal_path при входе в мир.
+var journal: Journal
+var trip_stats: TripStats
+## Путь сохранения журнала (тесты подставляют свой до add_child).
+var journal_path: String = Journal.PATH
 var env: Environment
 var sun: DirectionalLight3D
 var sky_mat: ProceduralSkyMaterial
@@ -45,6 +51,7 @@ static func create(seed_value: int) -> OpenWorld:
 func _ready() -> void:
 	GameState.world_seed = world_seed
 	GameState.weather_grip = 1.0
+	journal = Journal.load_or_new(journal_path)
 	materials = WorldMaterials.shared()
 	_build_environment()
 
@@ -85,6 +92,11 @@ func _ready() -> void:
 	weather.name = "Weather"
 	add_child(weather)
 	weather.setup(day_night, materials, camera, world_seed + 5)
+
+	trip_stats = TripStats.new()
+	trip_stats.name = "TripStats"
+	trip_stats.setup(journal, player, weather, day_night)
+	add_child(trip_stats)
 
 	traffic = TrafficManager.new()
 	traffic.name = "Traffic"

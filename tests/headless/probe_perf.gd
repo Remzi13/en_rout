@@ -15,6 +15,7 @@ func _run() -> void:
 	ChaseDirectorScript = load("res://game/chase/chase_director.gd")
 	var t := Time.get_ticks_usec()
 	var w = OpenWorldScript.create(42)
+	w.journal_path = "user://test_journal_perf.json"
 	root.add_child(w)
 	while w.loading:
 		await process_frame
@@ -38,4 +39,7 @@ func _run() -> void:
 			last = now
 		print("%s: среднее %.1f мс/кадр, худший %.1f мс, трафик %d" % [phase,
 			(Time.get_ticks_usec() - t) / 240000.0, worst / 1000.0, w.traffic.cars.size()])
+	w.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_journal_perf.json"))
 	quit()
