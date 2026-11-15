@@ -283,18 +283,29 @@ def place_far_farm(pl):
     pl.prop("Farm_Barn", "net_shed", -311.0, 824.0, face(-311.0, 824.0))
 
 
-def spots(lake):
+# Точки доставок стоят на оси дороги (docs/map-pipeline.md): подсказка должна появляться
+# у машины на любой полосе. Грунтовка 7 м, полуширина 3,5 м; радиус SPOT_R_M покрывает обе
+# полосы с запасом ~5 м и ~18 м вдоль дороги. У тупиков точка — за SPOT_END_M до конца.
+SPOT_R_M = 9.0
+SPOT_END_M = 3.0
+NET_SHED_NEAR = (-279.0, 349.0)  # склад сетей: точка — на Dirt_Hill напротив него
+
+
+def spots(lake, roads):
     """Точки доставок: имя, id, title, x, z, radius."""
-    out = []
-    p, d = along_from_end(lake, 63.0)
-    out.append(("Spot_Smokehouse", "smokehouse", "Коптильня", p[0] + d[1] * 4.0, p[1] - d[0] * 4.0, 8.0))
-    p, d = along_from_end(lake, 0.0)
-    out.append(("Spot_Shop", "shop", "Лавка", p[0] + d[0] * 7.0 - d[1] * 4.0, p[1] + d[1] * 7.0 + d[0] * 4.0, 8.0))
-    out.append(("Spot_NetShed", "net_shed", "Склад сетей", -259.0, 340.0, 7.0))  # между складом и Dirt_Hill
-    out.append(("Spot_FarFarm", "far_farm", "Хутор на холмах", -310.0, 797.0, 9.0))  # двор, конец Dirt_Farm
-    out.append(("Spot_EastPier", "east_pier", "Причал на том берегу", -469.0, 266.0, 8.0))  # конец Dirt_Pier у причала
-    out.append(("Spot_FishingCamp", "fishing_camp", "Рыбацкий лагерь", -591.0, 512.0, 8.0))  # конец Dirt_Cape
-    return out
+    def end_of(poly):
+        return along_from_end(poly, SPOT_END_M)[0]
+
+    smoke, _ = along_from_end(lake, 63.0)
+    net = nearest_on(roads["Dirt_Hill"], *NET_SHED_NEAR)
+    return [
+        ("Spot_Smokehouse", "smokehouse", "Коптильня", smoke[0], smoke[1], SPOT_R_M),
+        ("Spot_Shop", "shop", "Лавка", *end_of(lake), SPOT_R_M),  # торец Dirt_Lake, площадь
+        ("Spot_NetShed", "net_shed", "Склад сетей", net[0], net[1], SPOT_R_M),
+        ("Spot_FarFarm", "far_farm", "Хутор на холмах", *end_of(roads["Dirt_Farm"]), SPOT_R_M),
+        ("Spot_EastPier", "east_pier", "Причал на том берегу", *end_of(roads["Dirt_Pier"]), SPOT_R_M),
+        ("Spot_FishingCamp", "fishing_camp", "Рыбацкий лагерь", *end_of(roads["Dirt_Cape"]), SPOT_R_M),
+    ]
 
 
 def player_start(ground, lake):
@@ -401,7 +412,7 @@ def main():
         if x is None:
             x, z = nearest_on(south, *FOREST_TRACK_NEAR)
         plist.append((name, pid, title, x, z, r))
-    slist = spots(lake)
+    slist = spots(lake, new_roads)
     for coll, items in ((places, plist), (spots_coll, slist)):
         ids = {i[1] for i in items}
         remove_objects([o for o in coll.objects if o.get("id") in ids or o.name in {i[0] for i in items}])
