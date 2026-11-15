@@ -174,6 +174,18 @@ func _run() -> void:
 	H.check("при сохранении «Новая игра» спрашивает", _button("Стереть и начать") != null and _button("Отмена") != null, _texts())
 	H.check("мир не грузится до ответа", main.world == null)
 	await _shot("menu_confirm")
+	# Баг 013: фокус не уходит из окна на кнопки меню под ним.
+	var c_yes := _button("Стереть и начать")
+	var c_no := _button("Отмена")
+	var trapped := true
+	for b: Button in [c_yes, c_no]:
+		for side: int in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+			var n := b.get_node_or_null(b.get_focus_neighbor(side))
+			trapped = trapped and (n == c_yes or n == c_no)
+		for p: NodePath in [b.focus_next, b.focus_previous]:
+			var n := b.get_node_or_null(p)
+			trapped = trapped and (n == c_yes or n == c_no)
+	H.check("фокус в окне подтверждения не уходит под окно", trapped)
 	_button("Отмена").pressed.emit()
 	await _frames(3)
 	H.check("«Отмена» не стирает журнал", FileAccess.get_file_as_string(JPATH) == before)

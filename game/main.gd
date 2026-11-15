@@ -157,10 +157,19 @@ func _show_confirm_new_game() -> void:
 	no.custom_minimum_size.x = 270
 	row.add_child(yes)
 	row.add_child(no)
-	# Стрелки вверх/вниз не уводят фокус на кнопки меню под окном.
+	# Фокус не уходит из окна на кнопки меню под ним: вверх/вниз — на месте,
+	# влево/вправо и Tab — между «Стереть» и «Отмена» (баг 013).
 	for b: Button in [yes, no]:
 		b.focus_neighbor_top = b.get_path()
 		b.focus_neighbor_bottom = b.get_path()
+	yes.focus_neighbor_left = yes.get_path()
+	yes.focus_neighbor_right = no.get_path()
+	no.focus_neighbor_left = yes.get_path()
+	no.focus_neighbor_right = no.get_path()
+	yes.focus_next = no.get_path()
+	yes.focus_previous = no.get_path()
+	no.focus_next = yes.get_path()
+	no.focus_previous = yes.get_path()
 	no.grab_focus()
 
 
