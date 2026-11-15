@@ -42,7 +42,7 @@ func _ready() -> void:
 		row.add_child(b)
 		_key_buttons[action] = b
 		v.add_child(row)
-	v.add_child(UiTheme.label("Геймпад: левый стик — руль, триггеры — газ/тормоз, A — ручник, X — погоня, Y — на дорогу", 16, Color(1, 1, 1, 0.6)))
+	v.add_child(UiTheme.label("Геймпад: левый стик — руль, триггеры — газ/тормоз, A — ручник, X — погоня, Y — на дорогу, B — взять / сдать", 16, Color(1, 1, 1, 0.6)))
 	var reset := UiTheme.button("Сбросить клавиши", func() -> void:
 		GameState.reset_bindings()
 		_refresh_keys())
@@ -51,19 +51,9 @@ func _ready() -> void:
 	_refresh_keys()
 
 
-## Действия для переназначения: из GameState плюс interact (взять / сдать
-## доставку) перед «Паузой», если GameState его ещё не перечисляет.
+## Действия для переназначения (список в GameState).
 static func _actions() -> Array:
-	var list: Array = GameState.REBINDABLE_ACTIONS.duplicate()
-	for pair: Array in list:
-		if pair[0] == "interact":
-			return list
-	var at := list.size()
-	for i in list.size():
-		if list[i][0] == "pause":
-			at = i
-	list.insert(at, ["interact", "Действие: взять / сдать"])
-	return list
+	return GameState.REBINDABLE_ACTIONS
 
 
 func focus_first() -> void:

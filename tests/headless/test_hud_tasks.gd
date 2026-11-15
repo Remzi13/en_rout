@@ -130,6 +130,11 @@ func _run() -> void:
 	var far: Array[Dictionary] = radar.task_marks(Vector3(0, 0, 3000), 0.0, r)
 	H.check("места вне радиуса не рисуются", not _kinds(far).has(UNKNOWN) and not _kinds(far).has(PLACE), str(_kinds(far)))
 
+	# Взятие доставки показало «Везём»: проверяем и ждём, пока надпись уйдёт.
+	H.check("при взятии — «Везём»", hud.announce_caption.text == "Везём", "%s / %s" % [hud.announce_caption.text, hud.announce_title.text])
+	hud.tick(3.1)
+	H.check("«Везём» ушла", not hud.announce_box.visible and hud.queue.is_empty())
+
 	# Надписи: место, затем сдача — по очереди.
 	places.check(Vector3(0, 0, 60))
 	H.check("надпись «Открыто» видна", hud.announce_box.visible and hud.announce_caption.text == "Открыто" and hud.announce_title.text == "Холм над озером",
@@ -146,7 +151,14 @@ func _run() -> void:
 	hud.tick(0.2)
 	H.check("через 3 с — «Доставлено»", hud.announce_caption.text == "Доставлено" and hud.announce_title.text == "копчёная рыба",
 		"%s / %s" % [hud.announce_caption.text, hud.announce_title.text])
-	hud.tick(3.1)
+	var seen: Array[String] = []
+	for i in 80: # 8 с мелкими шагами
+		hud.tick(0.1)
+		if hud.announce_box.visible and not seen.has(hud.announce_caption.text):
+			seen.append(hud.announce_caption.text)
+	var all_done: bool = not del.has_target() and del.available_spots().is_empty()
+	H.check("«Все грузы доставлены» — только когда сдавать больше нечего", seen.has("Все грузы доставлены") == all_done,
+		"все сделаны=%s, надписи=%s" % [all_done, seen])
 	H.check("очередь пуста — надпись скрыта", not hud.announce_box.visible and hud.queue.is_empty())
 	var after: Array[Dictionary] = radar.task_marks(Vector3.ZERO, 0.0, r)
 	H.check("без доставки на радаре точка взятия, без цели", _kinds(after).has(PICKUP) and not _kinds(after).has(GOAL), str(_kinds(after)))

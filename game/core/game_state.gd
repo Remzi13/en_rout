@@ -10,7 +10,7 @@ const MAX_RECORDS := 10
 const REBINDABLE_ACTIONS := [
 	["accelerate", "Газ"], ["brake", "Тормоз / задний ход"], ["steer_left", "Влево"],
 	["steer_right", "Вправо"], ["handbrake", "Ручник"], ["respawn", "Вернуть на дорогу"],
-	["call_chase", "Вызвать погоню"], ["pause", "Пауза"],
+	["call_chase", "Вызвать погоню"], ["interact", "Действие: взять / сдать"], ["pause", "Пауза"],
 ]
 
 # --- Настройки ---

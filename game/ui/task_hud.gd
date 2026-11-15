@@ -71,8 +71,14 @@ func setup(places: PlaceTracker, d: Deliveries) -> void:
 		places.place_discovered.connect(func(_id: String, title: String) -> void: announce("Открыто", title))
 	if d != null:
 		d.prompt_changed.connect(show_prompt)
-		d.delivery_completed.connect(func(def: DeliveryDef) -> void: announce("Доставлено", def.cargo))
-		d.delivery_taken.connect(func(_def: DeliveryDef) -> void: refresh_goal())
+		d.delivery_completed.connect(func(def: DeliveryDef) -> void:
+			announce("Доставлено", def.cargo)
+			# Последняя доставка: больше нечего брать и некуда везти.
+			if not d.has_target() and d.available_spots().is_empty():
+				announce("Все грузы доставлены", "Дальше — просто дорога"))
+		d.delivery_taken.connect(func(def: DeliveryDef) -> void:
+			announce("Везём", def.cargo)
+			refresh_goal())
 		d.target_changed.connect(func(_has: bool, _pos: Vector3) -> void: refresh_goal())
 		show_prompt(d.prompt)
 	refresh_goal()
