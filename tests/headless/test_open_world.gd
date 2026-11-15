@@ -150,6 +150,9 @@ func _run() -> void:
 	H.check("респаун ставит на дорогу", p.on_road and p.grounded_wheels >= 3)
 
 	H.check("журнал считает путь машины", world.journal.distance_m > 10.0, "%.0f м" % world.journal.distance_m)
+	H.check("места и доставки созданы и работают после респауна", world.places != null and world.deliveries != null
+		and world.places.active and world.deliveries.enabled and world.places.journal == world.journal
+		and world.deliveries.target == p and world.deliveries.available_spots() is Array)
 	world.queue_free()
 	await _frames(5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_save_world.json"))

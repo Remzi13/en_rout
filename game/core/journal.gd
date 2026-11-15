@@ -13,6 +13,10 @@ extends RefCounted
 ## и места (не строки) при чтении просто отбрасываются.
 ## add_entry и open_place сразу сохраняют файл; статистику сохраняет TripStats
 ## раз в AUTOSAVE_S и при выходе.
+## Доставки: запись KIND_DELIVERY хранит id доставки (поле id, у прочих записей
+## пусто), по ним Deliveries узнаёт сделанные; active_delivery — id взятой, но
+## не сданной доставки («Продолжить» её возвращает). Оба поля необязательные:
+## файлы без них читаются как раньше, версия формата та же.
 
 signal entry_added(entry: Dictionary)
 
@@ -29,10 +33,12 @@ const WEATHER_FOG := "fog"
 
 ## Куда сохраняется этот журнал (тесты подставляют свой путь).
 var path: String = PATH
-## Записи по порядку: {kind, text, hour, weather, unix_time, date}.
+## Записи по порядку: {kind, text, id, hour, weather, unix_time, date}.
 var entries: Array[Dictionary] = []
 ## Открытые места: id -> true.
 var places: Dictionary = {}
+## id активной (взятой, но не сданной) доставки; пусто — нет.
+var active_delivery: String = ""
 ## Накопленная статистика поездок.
 var distance_m: float = 0.0
 var drive_time_s: float = 0.0
@@ -96,11 +102,12 @@ func save() -> bool:
 
 
 ## Добавляет запись и сохраняет журнал. hour — игровое время суток 0..24,
-## weather — WEATHER_* (clear/rain/fog).
-func add_entry(kind: String, text: String, hour: float, weather: String) -> Dictionary:
+## weather — WEATHER_* (clear/rain/fog), id — id доставки или места (можно пусто).
+func add_entry(kind: String, text: String, hour: float, weather: String, id: String = "") -> Dictionary:
 	var entry := {
 		"kind": kind,
 		"text": text,
+		"id": id,
 		"hour": snappedf(hour, 0.01),
 		"weather": weather,
 		"unix_time": int(Time.get_unix_time_from_system()),
@@ -132,6 +139,15 @@ func deliveries_count() -> int:
 		if e.get("kind", "") == KIND_DELIVERY:
 			n += 1
 	return n
+
+
+## id сделанных доставок: id -> true (по записям KIND_DELIVERY).
+func delivered_ids() -> Dictionary:
+	var ids := {}
+	for e in entries:
+		if e.get("kind", "") == KIND_DELIVERY and e.get("id", "") != "":
+			ids[e["id"]] = true
+	return ids
 
 
 func places_count() -> int:
@@ -178,6 +194,7 @@ func to_dict() -> Dictionary:
 		"version": VERSION,
 		"entries": entries,
 		"places": places.keys(),
+		"active_delivery": active_delivery,
 		"stats": {
 			"distance_m": distance_m,
 			"drive_time_s": drive_time_s,
@@ -207,9 +224,11 @@ func _from_dict(d: Dictionary) -> bool:
 		var w: Variant = ed.get("weather", "")
 		var ut: Variant = ed.get("unix_time", 0)
 		var date: Variant = ed.get("date", "")
+		var eid: Variant = ed.get("id", "")
 		entries.append({
 			"kind": ed["kind"],
 			"text": ed["text"],
+			"id": eid if typeof(eid) == TYPE_STRING else "",
 			"hour": _num(ed.get("hour")),
 			"weather": w if typeof(w) == TYPE_STRING else "",
 			"unix_time": int(ut) if _is_num(ut) else 0,
@@ -218,6 +237,8 @@ func _from_dict(d: Dictionary) -> bool:
 	for id: Variant in ids:
 		if typeof(id) == TYPE_STRING:
 			places[id] = true
+	var ad: Variant = d.get("active_delivery", "")
+	active_delivery = ad if typeof(ad) == TYPE_STRING else ""
 	distance_m = _num(s.get("distance_m"))
 	drive_time_s = _num(s.get("drive_time_s"))
 	rain_distance_m = _num(s.get("rain_distance_m"))
