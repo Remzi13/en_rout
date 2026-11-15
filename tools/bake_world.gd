@@ -11,14 +11,16 @@ extends SceneTree
 ## Что делает: собирает из линий дорог сеть (концы ближе NODE_MERGE_M — один
 ## узел, конец у середины другой дороги — Т-перекрёсток), кладёт дороги на
 ## рельеф (сглаженный профиль, ограничение уклона), продавливает под ними
-## землю, красит рельеф, расставляет растительность по маскам из Blender и
-## режет всё на чанки по 256 м.
+## землю, красит рельеф, расставляет растительность по маскам из Blender,
+## ставит объекты из коллекции Props (tools/map_props.gd, docs/map-pipeline.md)
+## и режет всё на чанки по 256 м.
 ##
 ## Чанки ПЕРЕЗАПИСЫВАЮТСЯ целиком: карта правится в Blender, а не в сценах.
 ## Запускать без --headless: в headless MultiMesh не отдаёт данные и
 ## растительность сохранится пустой.
 
 const MaterialBuilder := preload("res://tools/material_builder.gd")
+const MapProps := preload("res://tools/map_props.gd")
 const EXPORT_DIR := "res://art/map/export/"
 const ASSETS := "res://game/world/assets/"
 const CHUNKS := "res://game/world/chunks/"
@@ -59,6 +61,7 @@ var _edge_dist := PackedFloat32Array() ## расстояние до края б�
 var _roads: Array = [] ## [{points: PackedVector3Array, type: int}]
 var _nodes: Array = [] ## [{pos: Vector3, degree: int, highway: bool}]
 var _start := Transform3D()
+var _props: Dictionary = {} ## чанк -> [объект из MapProps.parse]
 
 
 func _initialize() -> void:
@@ -80,7 +83,8 @@ func _run() -> void:
 	var pieces := _split_roads()
 	_stamp_roads(pieces)
 	_place_start(data.get("start"))
-	print("дорог: %d участков, узлов: %d" % [_roads.size(), _nodes.size()])
+	var props := _group_props(data.get("props", []))
+	print("дорог: %d участков, узлов: %d, объектов: %d" % [_roads.size(), _nodes.size(), props])
 
 	_clear_chunks()
 	var coords: Array[Vector2i] = []
@@ -593,6 +597,29 @@ static func _make_curve(pts: PackedVector3Array, tangents: PackedVector3Array, o
 	return curve
 
 
+# --- Объекты (Props) -------------------------------------------------------------
+
+## Раскладывает объекты по чанкам (по позиции пустышки). Объекты вне мира
+## пропускаются. Возвращает, сколько объектов попало в чанки.
+func _group_props(src: Variant) -> int:
+	_props.clear()
+	if not src is Array:
+		return 0
+	var rect := Rect2(_x0, _z0, _chunks_n.x * CS, _chunks_n.y * CS)
+	var n := 0
+	for prop in MapProps.parse(src):
+		var p: Vector3 = prop["transform"].origin
+		if not rect.has_point(Vector2(p.x, p.z)):
+			push_warning("Props/%s: вне мира (%.0f, %.0f) — пропускаю" % [prop["name"], p.x, p.z])
+			continue
+		var cc := WorldDefs.chunk_of(p)
+		if not _props.has(cc):
+			_props[cc] = []
+		_props[cc].append(prop)
+		n += 1
+	return n
+
+
 # --- Чанк ----------------------------------------------------------------------
 
 func _clear_chunks() -> void:
@@ -694,6 +721,9 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 	var props := Node3D.new()
 	props.name = "Props"
 	root.add_child(props)
+	var ground := func(x: float, z: float) -> float: return _sample(_hgt, x, z)
+	for prop: Dictionary in _props.get(cc, []):
+		props.add_child(MapProps.build(prop, origin, ground))
 
 	_set_owner(root, root)
 	var packed := PackedScene.new()

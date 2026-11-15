@@ -2,11 +2,12 @@
 # (обычно через tools/export_map.sh, который затем запекает чанки):
 #   blender --background art/map/map.blend --python tools/blender/export_map.py
 # Результат — art/map/export/:
-#   map.json     — размеры мира и сетки, дороги (линии в XZ Godot), старт;
+#   map.json     — размеры мира и сетки, дороги (линии в XZ Godot), старт,
+#                  объекты из коллекции Props (см. docs/map-pipeline.md);
 #   heights.f32  — высоты рельефа на сетке 4 м (float32, строки по Z, little-endian);
 #   forest.u8, conifer.u8, rocks.u8 — маски из групп вершин Terrain (0..255).
 # Что читается из карты — см. tools/blender/make_map.py (Terrain, Roads,
-# PlayerStart). Мир — целые чанки по 256 м, покрытые рельефом Terrain.
+# PlayerStart) и docs/map-pipeline.md (Props). Мир — целые чанки по 256 м, покрытые рельефом Terrain.
 # Оси: Godot (x, y, z) = Blender (x, z, -y).
 
 import json
@@ -192,6 +193,44 @@ def export_start():
     return {"pos": [p.x, p.z, -p.y], "forward": [fwd.x, -fwd.y]}
 
 
+def export_props():
+    """Пустышки коллекции Props -> объекты для узла Props чанков.
+    Нет коллекции — пустой список. Модель проверяет запекание (Godot)."""
+    coll = bpy.data.collections.get("Props")
+    if coll is None:
+        return []
+    props = []
+    for obj in sorted(coll.all_objects, key=lambda o: o.name):
+        if obj.type != "EMPTY":
+            continue
+        model = str(obj.get("model", "")).strip()
+        if not model:
+            print("Внимание: Props/%s: нет свойства model — пропускаю" % obj.name)
+            continue
+        mw = obj.matrix_world
+        p = mw.translation
+        x_axis = mw.col[0].xyz
+        if abs(x_axis.normalized().z) > 0.02 or abs(mw.col[1].xyz.normalized().z) > 0.02:
+            print("Внимание: Props/%s: наклон не переносится, берётся только поворот вокруг Z" % obj.name)
+        sx, sy, sz = mw.to_scale()
+        collision = str(obj.get("collision", "box"))
+        if collision not in ("box", "none"):
+            print("Внимание: Props/%s: collision=%s, считаю box" % (obj.name, collision))
+            collision = "box"
+        props.append({
+            "name": obj.name,
+            "model": model,
+            # Оси: Godot (x, y, z) = Blender (x, z, -y); поворот вокруг Z
+            # Blender = поворот вокруг Y Godot на тот же угол.
+            "pos": [round(p.x, 3), round(p.z, 3), round(-p.y, 3)],
+            "yaw": round(math.atan2(x_axis.y, x_axis.x), 5),
+            "scale": [round(sx, 4), round(sz, 4), round(sy, 4)],
+            "snap_to_ground": bool(obj.get("snap_to_ground", False)),
+            "collision": collision,
+        })
+    return props
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -199,10 +238,12 @@ def main():
     data.update(export_terrain(depsgraph))
     data["roads"] = export_roads()
     data["start"] = export_start()
+    data["props"] = export_props()
     with open(os.path.join(OUT_DIR, "map.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
-    print("Экспорт карты: %d×%d чанков, сетка %d×%d, дорог %d -> %s" % (
-        data["chunks"][0], data["chunks"][1], data["grid"][0], data["grid"][1], len(data["roads"]), OUT_DIR))
+    print("Экспорт карты: %d×%d чанков, сетка %d×%d, дорог %d, объектов %d -> %s" % (
+        data["chunks"][0], data["chunks"][1], data["grid"][0], data["grid"][1], len(data["roads"]),
+        len(data["props"]), OUT_DIR))
 
 
 main()
