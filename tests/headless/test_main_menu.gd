@@ -3,7 +3,8 @@ extends SceneTree
 ## без сохранения нет «Продолжить»; после сессии файл есть и «Продолжить»
 ## видна; «Новая игра» → «Отмена» ничего не стирает; «Стереть и начать»
 ## стирает журнал, и новая сессия начинает статистику с нуля (уходящий мир
-## не дописывает старые км). Пауза не прибавляет км и время.
+## не дописывает старые км). Пауза не прибавляет км и время; «Рекорды»
+## в паузе открывают таблицу, «Назад» возвращает в паузу.
 ##
 ## main.gd пишет в настоящий user://journal.json, поэтому тест сохраняет его
 ## содержимое до начала и возвращает в конце; рекорды GameState уводятся
@@ -142,6 +143,19 @@ func _run() -> void:
 	H.check("на паузе км не растут", is_equal_approx(w.journal.distance_m, d0), "%.2f → %.2f" % [d0, w.journal.distance_m])
 	H.check("на паузе время за рулём не растёт", is_equal_approx(w.journal.drive_time_s, t0), "%.2f → %.2f" % [t0, w.journal.drive_time_s])
 	await _shot("pause")
+	# «Рекорды» в паузе (до экрана журнала, задача 5): открывают таблицу, «Назад» — в паузу.
+	H.check("в паузе есть «Рекорды»", _button("Рекорды") != null, _texts())
+	if _button("Рекорды") != null:
+		_button("Рекорды").pressed.emit()
+		await _frames(2)
+		H.check("«Рекорды» из паузы открывают таблицу", _button("Назад") != null and _button("Продолжить") == null, _texts())
+		H.check("с рекордами игра на паузе", paused)
+		await _shot("pause_records")
+		if _button("Назад") != null:
+			_button("Назад").pressed.emit()
+		await _frames(2)
+		H.check("«Назад» из рекордов возвращает в паузу", _button("Продолжить") != null and _button("Рекорды") != null and main.world != null, _texts())
+		H.check("фокус на «Рекорды» после возврата", _button("Рекорды") != null and _button("Рекорды").has_focus())
 	main._resume()
 	await _frames(10)
 	km1 = w.journal.distance_m

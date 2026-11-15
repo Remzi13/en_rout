@@ -41,12 +41,10 @@ func _backdrop() -> Control:
 		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 		bg.color = Color(0.06, 0.07, 0.09)
 		root.add_child(bg)
-		var glow := ColorRect.new()
-		glow.set_anchors_preset(Control.PRESET_FULL_RECT)
+		# Оранжевая подсветка снизу — радиальный градиент на TextureRect.
 		var g := Gradient.new()
 		g.set_color(0, Color(1.0, 0.45, 0.1, 0.25))
 		g.set_color(1, Color(0, 0, 0, 0))
-		glow.color = Color(0, 0, 0, 0)
 		var tex := GradientTexture2D.new()
 		tex.gradient = g
 		tex.fill = GradientTexture2D.FILL_RADIAL
@@ -180,9 +178,10 @@ func _confirm_new_game() -> void:
 
 
 # --- Рекорды --------------------------------------------------------------
-# Из главного меню убраны; переедут в журнал (раздел «Погоня», задача 5).
+# Из главного меню убраны; пока открываются из паузы, в задаче 5 переедут
+# в журнал (раздел «Погоня»). on_back — куда ведёт «Назад».
 
-func _show_records() -> void:
+func _show_records(on_back: Callable = _show_main_menu) -> void:
 	_clear_screen()
 	_screen = _backdrop()
 	_ui.add_child(_screen)
@@ -216,7 +215,7 @@ func _show_records() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(spacer)
-	var back := UiTheme.button("Назад", _show_main_menu)
+	var back := UiTheme.button("Назад", on_back)
 	v.add_child(back)
 	back.grab_focus()
 
@@ -293,8 +292,22 @@ func _pause() -> void:
 			if _paused_ui != null:
 				_paused_ui.visible = true
 				(_paused_ui.find_children("*", "Button", true, false)[0] as Button).grab_focus())))
+	# Временно, до экрана журнала (задача 5): там рекорды будут в разделе «Погоня».
+	v.add_child(UiTheme.button("Рекорды", func() -> void:
+		_paused_ui.visible = false
+		_show_records(_records_to_pause)))
 	v.add_child(UiTheme.button("В главное меню", _to_menu))
 	cont.grab_focus()
+
+
+func _records_to_pause() -> void:
+	_clear_screen()
+	if _paused_ui != null:
+		_paused_ui.visible = true
+		var b := _paused_ui.find_children("*", "Button", true, false)
+		for n in b:
+			if (n as Button).text == "Рекорды":
+				(n as Button).grab_focus()
 
 
 func _resume() -> void:
