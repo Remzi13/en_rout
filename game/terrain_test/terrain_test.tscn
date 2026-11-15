@@ -44,10 +44,10 @@ world_background = 2
 auto_shader_enabled = true
 macro_variation_enabled = true
 
-[node name="TerrainTest" type="Node3D" unique_id=1156206407]
+[node name="TerrainTest" type="Node3D" unique_id=2064530023]
 script = ExtResource("1_6o4v2")
 
-[node name="Terrain3D" type="Terrain3D" parent="." unique_id=812175068]
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=157386635]
 data_directory = "res://game/terrain_test/data"
 material = SubResource("Terrain3DMaterial_6pght")
 assets = ExtResource("3_0xy4s")

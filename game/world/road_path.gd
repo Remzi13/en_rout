@@ -5,9 +5,12 @@ extends Path3D
 ## редакторе: полотно и коллизия перестраиваются при изменении кривой.
 ## Концы участков, которые ближе WorldDefs.JOIN_DISTANCE_M друг к другу,
 ## игра считает одним узлом дорожной сети (так связываются чанки и перекрёстки).
+## Грунтовка у шоссе: кривая доходит до узла на оси шоссе, а полотно обрезано
+## на trim_*_m и лежит чуть ниже асфальта, так что его край уходит под кромку.
 
 const SAMPLE_M := 4.0
 const SKIRT_M := 0.8
+const DIRT_LIFT_M := 0.045 ## грунтовка ниже асфальта (ROAD_LIFT_M) и выше площадок
 
 @export var road_type: WorldDefs.RoadType = WorldDefs.RoadType.HIGHWAY:
 	set(v):
@@ -17,6 +20,16 @@ const SKIRT_M := 0.8
 @export var uv_offset_m: float = 0.0:
 	set(v):
 		uv_offset_m = v
+		_queue_rebuild()
+
+## Сколько полотна не строить от начала и конца кривой (примыкание к шоссе).
+@export var trim_start_m: float = 0.0:
+	set(v):
+		trim_start_m = v
+		_queue_rebuild()
+@export var trim_end_m: float = 0.0:
+	set(v):
+		trim_end_m = v
 		_queue_rebuild()
 
 var _mesh_instance: MeshInstance3D
@@ -68,14 +81,16 @@ func _rebuild() -> void:
 		_body = null
 	if curve == null or curve.point_count < 2:
 		return
-	var length := curve.get_baked_length()
+	var length := curve.get_baked_length() - trim_start_m - trim_end_m
+	if length < 1.0:
+		return
 	var n := maxi(2, ceili(length / SAMPLE_M))
 	var pts := PackedVector3Array()
 	for k in n + 1:
-		pts.append(curve.sample_baked(length * k / n, true))
+		pts.append(curve.sample_baked(trim_start_m + length * k / n, true))
 	var step := length / n
 	var hw := width() * 0.5
-	var lift := Vector3(0.0, WorldDefs.ROAD_LIFT_M, 0.0)
+	var lift := Vector3(0.0, WorldDefs.ROAD_LIFT_M if is_highway() else DIRT_LIFT_M, 0.0)
 	var skirt := Vector3(0.0, -SKIRT_M, 0.0)
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -94,8 +109,8 @@ func _rebuild() -> void:
 		var nrm := (l1 - l0).cross(rr0 - l0).normalized()
 		if nrm.y < 0.0:
 			nrm = -nrm
-		var v0 := (uv_offset_m + k * step) / 10.0
-		var v1 := (uv_offset_m + (k + 1) * step) / 10.0
+		var v0 := (uv_offset_m + trim_start_m + k * step) / 10.0
+		var v1 := (uv_offset_m + trim_start_m + (k + 1) * step) / 10.0
 		var base := verts.size()
 		verts.append_array([l0, rr0, l1, rr1])
 		normals.append_array([nrm, nrm, nrm, nrm])

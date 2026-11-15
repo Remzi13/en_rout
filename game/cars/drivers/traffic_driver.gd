@@ -4,6 +4,8 @@ extends RefCounted
 ## на узлах выбирает случайное продолжение, держит дистанцию и тормозит
 ## перед препятствием.
 
+const TIGHT_TURN_MPS := 7.0 ## на этой скорости руль ещё поворачивается до упора
+
 var world: RoadNetwork
 var edge: RoadEdge
 var forward: bool = true ## едем от начала ребра к концу
@@ -67,6 +69,8 @@ func update_input(car: ArcadeCar, c: ArcadeCar.CarControls, delta: float) -> voi
 	var dist: float = probe["dist"]
 	if dist < INF:
 		target_mps = minf(target_mps, maxf((dist - 6.0) * 0.6, 0.0))
+	if absf(c.steer) >= 1.0: # не вписывается — сбросить до скорости полного руля
+		target_mps = minf(target_mps, TIGHT_TURN_MPS)
 	SteerUtil.hold_speed(car, c, target_mps)
 
 	if target_mps > 3.0 and absf(v) < 1.0:
