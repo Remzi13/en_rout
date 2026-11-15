@@ -171,7 +171,7 @@ func _run() -> void:
 	root.add_child(menu)
 	await _frames(1)
 	H.check("interact в переназначении", menu._key_buttons.has("interact"))
-	var acts: Array = menu_cls._actions().map(func(p: Array) -> String: return p[0])
+	var acts: Array = GameState.REBINDABLE_ACTIONS.map(func(p: Array) -> String: return p[0])
 	H.check("interact перед паузой", acts.find("interact") == acts.find("pause") - 1, str(acts))
 	menu.queue_free()
 
