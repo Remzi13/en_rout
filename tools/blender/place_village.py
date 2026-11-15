@@ -1,4 +1,4 @@
-# Расстановка рыбацкой деревни, мест, точек доставок и старта на карте.
+# Расстановка рыбацкой деревни, мест, точек доставок, старта и грунтовок к ним.
 # Запуск из корня проекта (файл карты сохраняется):
 #   blender --background art/map/map.blend --python tools/blender/place_village.py
 # затем tools/export_map.sh.
@@ -6,13 +6,12 @@
 # Скрипт идемпотентный: при каждом запуске пересоздаёт только своё —
 #   Props/<VILLAGE_COLLS> — подколлекции с пустышками построек (Props.all_objects
 #                           читает экспорт, так что подколлекции ему не мешают);
+#   Roads/<NEW_ROADS>     — грунтовки к местам и точкам (кривые с этими именами
+#                           удаляются и строятся заново, чужие дороги не трогает);
 #   Places, Spots         — пустышки с id из PLACES и SPOTS (чужие не трогает);
-#   PlayerStart           — положение и направление;
-#   прогалины в лесу      — группа вершин forest у Terrain = forest_orig × множитель
-#                           прогалин (CLEARINGS). Исходная маска один раз копируется
-#                           в группу forest_orig и дальше не меняется; убрать прогалину
-#                           из CLEARINGS и перезапустить — лес вернётся.
-# Рельеф (вершины Terrain), дороги и маски conifer/rocks не меняются.
+#   PlayerStart           — положение и направление.
+# Рельеф (вершины Terrain), старые дороги и маски растительности не меняются: прогалины
+# вокруг построек и точек делает запекание (docs/map-pipeline.md, «Лес и прогалины»).
 #
 # Координаты ниже — Godot (x, z): x тот же, z = −y Blender. Соглашения о пустышках —
 # docs/map-pipeline.md (Props, Places/Spots, «Модели деревни»). Модель смотрит фасадом в
@@ -30,28 +29,43 @@ WATER = -4.0
 M = "res://game/world/models/village/"
 VILLAGE_COLLS = ("Village", "EastPier", "FishingCamp", "FarFarm")
 
-# Прогалины (Godot x, z): круг (x, z, r) или полоса ((x1, z1), (x2, z2), r).
-# Внутри r лес убран, дальше FALLOFF_M метров плавно возвращается.
-FALLOFF_M = 14.0
-CLEARINGS = [
-    ((-135.0, 268.0), (-252.0, 321.0), 30.0),  # улица деревни вдоль Dirt_Lake
-    (-272.0, 334.0, 30.0),  # площадь в конце дороги
-    ((-280.0, 340.0), (-360.0, 352.0), 26.0),  # спуск к причалу, вид на озеро
-    ((-296.0, 524.0), (-385.0, 458.0), 28.0),  # луг на холме над озером (hill_view)
-    ((-466.0, 140.0), (-462.0, 268.0), 12.0),  # просека от шоссе к причалу на том берегу
-    (-462.0, 245.0, 20.0),  # берег у второго причала
-    (-560.0, 470.0, 14.0),  # мыс между озером и прудом (lake_cape)
-    (-640.0, 605.0, 26.0),  # рыбацкий лагерь у пруда
-    (655.0, -100.0, 30.0),  # хутор
-]
-
 # Места: имя пустышки, id, title, x, z, radius.
 PLACES = [
-    ("Place_HillView", "hill_view", "Холм над озером", -322.0, 505.0, 40.0),
+    ("Place_HillView", "hill_view", "Холм над озером", -302.0, 530.0, 40.0),  # вершина: Dirt_Hill и бровка Dirt_Cape
     ("Place_ForestTrack", "forest_track", "Лесная грунтовка", None, None, 30.0),  # точка на Dirt_South
-    ("Place_LakeCape", "lake_cape", "Мыс", -556.0, 474.0, 30.0),
+    ("Place_LakeCape", "lake_cape", "Мыс", -556.0, 474.0, 30.0),  # Dirt_Cape проходит через радиус
 ]
 FOREST_TRACK_NEAR = (205.0, -380.0)  # ближайшая точка Dirt_South — самый глухой лес на гребне
+
+# Грунтовки к местам и точкам (Godot x, z). Начало и конец, где дорога примыкает к
+# другой, вычисляются в build_roads: конец у середины чужой дороги — Т-перекрёсток,
+# два конца в одной точке шоссе — перекрёсток (docs/map-pipeline.md, make_map.py).
+# Профиль запекания ограничен уклоном 14 %, поэтому дороги идут по пологим склонам:
+# точки подобраны по рельефу так, чтобы сглаженный уклон был не больше ~10 %.
+NEW_ROADS = ("Dirt_Hill", "Dirt_Farm", "Dirt_Cape", "Dirt_Pier")
+# Dirt_Hill: с площади деревни на юг по террасе вдоль восточного берега, на холм над
+# озером (~18 м), вниз к кольцевому шоссе. Начало — на Dirt_Lake за HILL_FROM_END_M до её
+# конца: конец Dirt_Lake (площадь) должен быть дальше 8 м от Dirt_Hill, иначе запекание
+# пристегнёт его к ней Т-перекрёстком.
+HILL_ROAD = [(-247.0, 343.0), (-248.0, 400.0), (-258.0, 470.0), (-286.0, 528.0),
+             (-301.0, 590.0), (-294.0, 645.0)]
+HILL_FROM_END_M = 20.0
+HILL_RING_NEAR = (-292.0, 701.0)
+# Dirt_Farm: от того же места на шоссе на юг, на пригорок у подножия краевых холмов.
+FARM_ROAD = [(-296.0, 750.0), (-310.0, 792.0)]
+# Dirt_Cape: с вершины холма к северной бровке (вид вниз на озеро), на запад по гребню,
+# вниз на узкий берег у самой воды, через мыс на перешеек к пруду (рыбацкий лагерь).
+CAPE_FROM_NEAR = (-292.0, 540.0)
+CAPE_ROAD = [(-315.0, 506.0), (-350.0, 510.0), (-395.0, 532.0), (-435.0, 532.0),
+             (-480.0, 508.0), (-530.0, 500.0), (-560.0, 490.0), (-588.0, 505.0)]
+# Dirt_Pier: от поперечного шоссе на юг через лес, серпантином (разворот у бровки) вниз
+# по берегу к самой воде у второго причала. Берег у причала ~25 %, поэтому спуск идёт
+# наискосок, вдоль берега. Причал ставится на высоту конца дороги (см. place_east_pier).
+PIER_CROSS_NEAR = (-480.0, 131.0)
+# Разворот — севернее z = 256 (граница чанков): на границе дорога должна быть почти прямой
+# (tests: test_world_map, «дорога гладко переходит через границу чанка»).
+PIER_ROAD = [(-508.0, 185.0), (-540.0, 218.0), (-552.0, 240.0), (-535.0, 252.0),
+             (-505.0, 264.0), (-472.0, 269.0)]
 
 
 def g2b(x, z, y=0.0):
@@ -230,44 +244,56 @@ def place_village(pl, lake):
     pl.boat_at_pier("Boat_3", px, pz, out, 6.0, -9.0, 35.0)
 
 
-def place_east_pier(pl, cross):
-    """Второй причал — на северном берегу, напротив деревни через озеро; к нему от
-    Highway_Cross спускается просека."""
-    px, pz = -461.0, 270.5
-    out = (0.05, 1.0)
-    pl.pier("Pier_East", px, pz, norm(*out))
-    pl.boat_at_pier("Boat_East", px, pz, norm(*out), 12.0, 2.2, -3.0)
-    pl.prop("NetRack_East", "net_rack", -470.0, 258.0, norm(1.0, 0.4), collision="none")
+def place_east_pier(pl):
+    """Второй причал — на северном берегу, напротив деревни через озеро, у конца Dirt_Pier.
+    Запекание кладёт конец дороги на среднюю высоту рельефа в круге 6 м (не ниже −2,4) и
+    выравнивает землю вокруг на ~9 м: береговой конец причала стоит в этой полосе, поэтому
+    его высота — та же, чуть ниже полотна, а не рельеф до запекания (иначе причал засыпет)."""
+    ex, ez = PIER_ROAD[-1]
+    end_y = sum(pl.g.h(ex + dx, ez + dz) for dx, dz in ((0, 0), (6, 0), (-6, 0), (0, 6), (0, -6))) / 5.0
+    px, pz = -462.0, 271.0
+    out = norm(0.05, 1.0)
+    pl.prop("Pier_East", "pier", px, pz, (-out[0], -out[1]), snap=False, collision="none",
+            y=max(end_y, WATER + 1.6) - 0.1)
+    pl.boat_at_pier("Boat_East", px, pz, out, 12.0, 2.2, -3.0)
+    pl.prop("NetRack_East", "net_rack", -450.0, 259.0, norm(-1.0, 0.3), collision="none")
 
 
-def place_fishing_camp(pl, ring):
-    """Рыбацкий лагерь на низком берегу пруда у кольцевого шоссе (юго-запад от озера)."""
-    pl.prop("Camp_Boat_Shore1", "boat", -644.0, 592.0, norm(-0.4, -1.0), collision="none")
-    pl.prop("Camp_Boat_Shore2", "boat", -637.5, 594.0, norm(-0.1, -1.0), collision="none")
-    pl.prop("Camp_NetRack_1", "net_rack", -656.0, 606.0, norm(0.6, -1.0), collision="none")
-    pl.prop("Camp_NetRack_2", "net_rack", -633.0, 608.0, norm(-0.5, -1.0), collision="none")
-    pl.prop("Camp_Hut", "smokehouse", -625.0, 611.0, norm(-0.8, 0.6))
-    pl.prop("Camp_Boat_Water", "boat", -650.0, 566.0, norm(1.0, -0.3), snap=False, collision="none", y=WATER)
+def place_fishing_camp(pl):
+    """Рыбацкий лагерь на низком песчаном перешейке между озером и прудом, в конце
+    Dirt_Cape: лодки на песке у пруда, вешала, хижина."""
+    pl.prop("Camp_Hut", "smokehouse", -578.0, 524.0, norm(-10.0, -16.0))
+    pl.prop("Camp_NetRack_1", "net_rack", -598.0, 527.0, norm(1.0, 0.3), collision="none")
+    pl.prop("Camp_NetRack_2", "net_rack", -593.0, 538.0, norm(1.0, -0.2), collision="none")
+    pl.prop("Camp_Boat_Shore1", "boat", -609.0, 514.0, norm(-1.0, 0.25), collision="none")
+    pl.prop("Camp_Boat_Shore2", "boat", -605.0, 524.0, norm(-1.0, -0.1), collision="none")
+    pl.prop("Camp_Boat_Water", "boat", -628.0, 512.0, norm(0.3, 1.0), snap=False, collision="none", y=WATER)
 
 
-def place_far_farm(pl, cross):
-    """Хутор у восточного конца Highway_Cross, на пологом гребне у края леса, фасадами к шоссе."""
-    pl.facing_road("Farm_House_A", "house_a", 641.0, -104.0, cross, 6.0)
-    pl.facing_road("Farm_House_B", "house_b", 668.0, -112.0, cross, -10.0)
-    pl.facing_road("Farm_Barn", "net_shed", 656.0, -86.0, cross, 15.0)
+def place_far_farm(pl):
+    """Хутор на пригорке за кольцевым шоссе, у подножия краевых холмов, в конце Dirt_Farm:
+    дом, второй дом и сарай вокруг двора, фасадами во двор."""
+    yard = (-310.0, 797.0)
+
+    def face(x, z):
+        return norm(yard[0] - x, yard[1] - z)
+
+    pl.prop("Farm_House_A", "house_a", -327.0, 804.0, face(-327.0, 804.0))
+    pl.prop("Farm_House_B", "house_b", -293.0, 806.0, face(-293.0, 806.0))
+    pl.prop("Farm_Barn", "net_shed", -311.0, 824.0, face(-311.0, 824.0))
 
 
-def spots(lake, cross):
+def spots(lake):
     """Точки доставок: имя, id, title, x, z, radius."""
     out = []
     p, d = along_from_end(lake, 63.0)
     out.append(("Spot_Smokehouse", "smokehouse", "Коптильня", p[0] + d[1] * 4.0, p[1] - d[0] * 4.0, 8.0))
     p, d = along_from_end(lake, 0.0)
     out.append(("Spot_Shop", "shop", "Лавка", p[0] + d[0] * 7.0 - d[1] * 4.0, p[1] + d[1] * 7.0 + d[0] * 4.0, 8.0))
-    out.append(("Spot_NetShed", "net_shed", "Склад сетей", -271.0, 343.0, 7.0))
-    out.append(("Spot_FarFarm", "far_farm", "Хутор на холмах", 654.0, -116.0, 9.0))
-    out.append(("Spot_EastPier", "east_pier", "Причал на том берегу", -462.0, 218.0, 8.0))
-    out.append(("Spot_FishingCamp", "fishing_camp", "Рыбацкий лагерь", -638.0, 624.0, 8.0))
+    out.append(("Spot_NetShed", "net_shed", "Склад сетей", -259.0, 340.0, 7.0))  # между складом и Dirt_Hill
+    out.append(("Spot_FarFarm", "far_farm", "Хутор на холмах", -310.0, 797.0, 9.0))  # двор, конец Dirt_Farm
+    out.append(("Spot_EastPier", "east_pier", "Причал на том берегу", -469.0, 266.0, 8.0))  # конец Dirt_Pier у причала
+    out.append(("Spot_FishingCamp", "fishing_camp", "Рыбацкий лагерь", -591.0, 512.0, 8.0))  # конец Dirt_Cape
     return out
 
 
@@ -284,57 +310,65 @@ def player_start(ground, lake):
     return p
 
 
-# --- Прогалины ------------------------------------------------------------------
+# --- Грунтовки ------------------------------------------------------------------
 
-def smoothstep(a, b, x):
-    t = min(max((x - a) / (b - a), 0.0), 1.0)
-    return t * t * (3.0 - 2.0 * t)
-
-
-def clearing_factor(x, z):
-    f = 1.0
-    for c in CLEARINGS:
-        if len(c) == 3 and isinstance(c[0], tuple):
-            (ax, az), (bx, bz), r = c
-            dx, dz = bx - ax, bz - az
-            u = max(0.0, min(1.0, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)))
-            dist = math.hypot(x - ax - dx * u, z - az - dz * u)
+def make_road(name, pts, ground, coll, like):
+    """Грунтовка через точки pts (Godot x, z). Ручки — по Катмулл-Рому (кривая проходит
+    через точки без петель), остальное — как у дороги like (материал, ширина, Shrinkwrap)."""
+    cu = bpy.data.curves.new(name, "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = like.data.bevel_depth
+    cu.bevel_resolution = like.data.bevel_resolution
+    cu.resolution_u = like.data.resolution_u
+    sp = cu.splines.new("BEZIER")
+    sp.bezier_points.add(len(pts) - 1)
+    n = len(pts)
+    for i, (bp, (x, z)) in enumerate(zip(sp.bezier_points, pts)):
+        if i == 0:
+            tx, tz = (pts[1][0] - x) / 3.0, (pts[1][1] - z) / 3.0
+        elif i == n - 1:
+            tx, tz = (x - pts[i - 1][0]) / 3.0, (z - pts[i - 1][1]) / 3.0
         else:
-            cx, cz, r = c
-            dist = math.hypot(x - cx, z - cz)
-        f = min(f, smoothstep(r, r + FALLOFF_M, dist))
-    return f
+            tx, tz = (pts[i + 1][0] - pts[i - 1][0]) / 6.0, (pts[i + 1][1] - pts[i - 1][1]) / 6.0
+        y = ground.h(x, z) + 1.0
+        bp.handle_left_type = "FREE"
+        bp.handle_right_type = "FREE"
+        bp.co = g2b(x, z, y)
+        bp.handle_left = g2b(x - tx, z - tz, y)
+        bp.handle_right = g2b(x + tx, z + tz, y)
+    obj = bpy.data.objects.new(name, cu)
+    obj["road_type"] = "dirt"
+    for m in like.data.materials:
+        cu.materials.append(m)
+    for m in like.modifiers:
+        if m.type == "SHRINKWRAP":
+            sw = obj.modifiers.new(m.name, "SHRINKWRAP")
+            for attr in ("target", "wrap_method", "use_project_z", "use_negative_direction",
+                         "use_positive_direction", "offset"):
+                setattr(sw, attr, getattr(m, attr))
+    coll.objects.link(obj)
+    return obj
 
 
-def apply_clearings():
-    terr = bpy.data.objects["Terrain"]
-    me = terr.data
-    vg = terr.vertex_groups["forest"]
-    orig = terr.vertex_groups.get("forest_orig")
-    if orig is None:
-        orig = terr.vertex_groups.new(name="forest_orig")
-        for v in me.vertices:
-            for g in v.groups:
-                if g.group == vg.index and g.weight > 0.0:
-                    orig.add([v.index], g.weight, "REPLACE")
-    mw = terr.matrix_world
-    changed = 0
-    for v in me.vertices:
-        w0 = 0.0
-        w = 0.0
-        for g in v.groups:
-            if g.group == orig.index:
-                w0 = g.weight
-            elif g.group == vg.index:
-                w = g.weight
-        if w0 == 0.0 and w == 0.0:
-            continue
-        p = mw @ v.co
-        target = round(w0 * clearing_factor(p.x, -p.y), 3)
-        if abs(target - w) > 1e-4:
-            vg.add([v.index], target, "REPLACE")
-            changed += 1
-    return changed
+def build_roads(ground, lake, cross, ring):
+    """Пересоздаёт NEW_ROADS. Возвращает их ломаные (Godot x, z) по имени."""
+    coll = bpy.data.collections["Roads"]
+    like = bpy.data.objects["Dirt_Lake"]
+    for name in NEW_ROADS:
+        old = bpy.data.objects.get(name)
+        if old is not None:
+            data = old.data
+            bpy.data.objects.remove(old, do_unlink=True)
+            if data is not None and data.users == 0:
+                bpy.data.curves.remove(data)
+    hill_start, _ = along_from_end(lake, HILL_FROM_END_M)
+    at_ring = nearest_on(ring, *HILL_RING_NEAR)
+    make_road("Dirt_Hill", [hill_start] + HILL_ROAD + [at_ring], ground, coll, like)
+    hill = road_polyline("Dirt_Hill")
+    make_road("Dirt_Farm", [at_ring] + FARM_ROAD, ground, coll, like)
+    make_road("Dirt_Cape", [nearest_on(hill, *CAPE_FROM_NEAR)] + CAPE_ROAD, ground, coll, like)
+    make_road("Dirt_Pier", [nearest_on(cross, *PIER_CROSS_NEAR)] + PIER_ROAD, ground, coll, like)
+    return {name: road_polyline(name) for name in NEW_ROADS}
 
 
 # --- Главное --------------------------------------------------------------------
@@ -346,6 +380,7 @@ def main():
     cross = road_polyline("Highway_Cross")
     ring = road_polyline("Highway_Ring")
     south = road_polyline("Dirt_South")
+    new_roads = build_roads(ground, lake, cross, ring)
 
     props = get_coll("Props", scene_root)
     for name in VILLAGE_COLLS:
@@ -355,9 +390,9 @@ def main():
             bpy.data.collections.remove(old)
     colls = {name: get_coll(name, props) for name in VILLAGE_COLLS}
     place_village(Placer(ground, colls["Village"]), lake)
-    place_east_pier(Placer(ground, colls["EastPier"]), cross)
-    place_fishing_camp(Placer(ground, colls["FishingCamp"]), ring)
-    place_far_farm(Placer(ground, colls["FarFarm"]), cross)
+    place_east_pier(Placer(ground, colls["EastPier"]))
+    place_fishing_camp(Placer(ground, colls["FishingCamp"]))
+    place_far_farm(Placer(ground, colls["FarFarm"]))
 
     places = get_coll("Places", scene_root)
     spots_coll = get_coll("Spots", scene_root)
@@ -366,7 +401,7 @@ def main():
         if x is None:
             x, z = nearest_on(south, *FOREST_TRACK_NEAR)
         plist.append((name, pid, title, x, z, r))
-    slist = spots(lake, cross)
+    slist = spots(lake)
     for coll, items in ((places, plist), (spots_coll, slist)):
         ids = {i[1] for i in items}
         remove_objects([o for o in coll.objects if o.get("id") in ids or o.name in {i[0] for i in items}])
@@ -377,11 +412,13 @@ def main():
             obj["radius"] = r
 
     sp = player_start(ground, lake)
-    changed = apply_clearings()
     bpy.ops.wm.save_mainfile(compress=True)
     n_props = sum(len(c.objects) for c in colls.values())
-    print("Деревня: объектов %d, мест %d, точек %d, старт (%.1f, %.1f), вершин леса изменено %d" % (
-        n_props, len(plist), len(slist), sp[0], sp[1], changed))
+    print("Деревня: объектов %d, мест %d, точек %d, старт (%.1f, %.1f)" % (
+        n_props, len(plist), len(slist), sp[0], sp[1]))
+    for name, poly in new_roads.items():
+        length = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(poly, poly[1:]))
+        print("  %-10s %4.0f м" % (name, length))
     for name, pid, title, x, z, r in plist + slist:
         print("  %-14s (%.1f, %.1f) r=%g" % (pid, x, z, r))
 

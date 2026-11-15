@@ -2,7 +2,7 @@
 
 - **Серьёзность:** major для задачи 9 (контент), логика работает
 - **Кому:** level-designer (`art/map/map.blend`, коллекции `Places`/`Spots`, дороги)
-- **Статус:** открыт
+- **Статус:** исправлено, ветка w2c-level (грунтовки Dirt_Hill/Dirt_Farm/Dirt_Cape/Dirt_Pier в `tools/blender/place_village.py`; хутор перенесён за холм к югу, smokehouse → far_farm 540 м по дорогам через радиус `hill_view`; лагерь — на перешейке у пруда в конце Dirt_Cape, путь shop → fishing_camp 596 м через `hill_view` и `lake_cape`; все точки ≤ 9 м от полотна). `nets` идёт через Cross и Dirt_Pier, мимо `lake_cape` не проходит (объезда озера по западу нет: склон между прудом и озером круче 14 %)
 
 ## Шаги
 1. Граф дорог из `game/world/world_index.tres` (`RoadNetwork.from_index`), кратчайший путь между ближайшими к точкам дорогами (скрипт QA `qa_routes.gd`).
