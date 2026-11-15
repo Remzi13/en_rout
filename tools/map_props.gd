@@ -8,13 +8,16 @@ extends RefCounted
 ##    snap_to_ground: bool, collision: "box" | "none"}
 ## Узел объекта: StaticBody3D (collision = box; коробка по AABB модели, слой
 ## мира) или Node3D (collision = none), внутри — экземпляр модели «Model».
+## У узла объекта только положение и поворот: масштаб пустышки ложится на
+## Model и размер коробки (масштаб на теле физика Godot не поддерживает).
 
 const LAYER_WORLD := WorldDefs.LAYER_WORLD
 
 
 ## Проверяет записи из map.json. Плохие и с неизвестной моделью —
 ## предупреждение и пропуск. Результат: [{name, scene: PackedScene,
-## transform (глобальный; высота — пустышки), snap: bool, collision: String}].
+## transform (глобальный, без масштаба; высота — пустышки), scale: Vector3,
+## snap: bool, collision: String}].
 static func parse(list: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for item: Variant in list:
@@ -39,7 +42,7 @@ static func parse(list: Array) -> Array[Dictionary]:
 		var scale := Vector3.ONE
 		if s is Array and (s as Array).size() == 3:
 			scale = Vector3(float(s[0]), float(s[1]), float(s[2]))
-		var basis := Basis(Vector3.UP, float(d.get("yaw", 0.0))) * Basis.from_scale(scale)
+		var basis := Basis(Vector3.UP, float(d.get("yaw", 0.0)))
 		var collision := str(d.get("collision", "box"))
 		if collision != "none":
 			collision = "box"
@@ -47,6 +50,7 @@ static func parse(list: Array) -> Array[Dictionary]:
 			"name": pname.validate_node_name(),
 			"scene": scene,
 			"transform": Transform3D(basis, Vector3(float(p[0]), float(p[1]), float(p[2]))),
+			"scale": scale,
 			"snap": bool(d.get("snap_to_ground", false)),
 			"collision": collision,
 		})
@@ -59,7 +63,8 @@ static func parse(list: Array) -> Array[Dictionary]:
 static func build(prop: Dictionary, origin: Vector3, ground: Callable) -> Node3D:
 	var model: Node3D = (prop["scene"] as PackedScene).instantiate(PackedScene.GEN_EDIT_STATE_INSTANCE)
 	model.name = "Model"
-	var box := model_aabb(model)
+	model.scale = prop.get("scale", Vector3.ONE)
+	var box := model_aabb(model) # уже с масштабом — в координатах узла объекта
 	var xf: Transform3D = prop["transform"]
 	if prop["snap"]:
 		var low := INF

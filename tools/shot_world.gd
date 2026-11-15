@@ -8,6 +8,7 @@ extends SceneTree
 
 # OpenWorld грузится в рантайме: в режиме -s автозагрузка GameState не видна
 # при компиляции этого скрипта (как в tests/headless/test_open_world.gd).
+const JOURNAL := "user://shot_journal.json" ## временный журнал, удаляется после снимка
 var _world
 var _shot := ""
 var _wait_s := 4.0
@@ -35,6 +36,7 @@ func _run() -> void:
 		quit(1)
 		return
 	_world = (load("res://game/world/open_world.gd") as GDScript).create(1)
+	_world.journal_path = JOURNAL # не трогать сохранение игрока
 	root.add_child(_world)
 	if _world.loading:
 		await _world.ready_to_play
@@ -57,4 +59,9 @@ func _run() -> void:
 	print("Кадр: позиция машины (%.1f, %.1f, %.1f), %.0f км/ч" % [p.x, p.y, p.z,
 		car.linear_velocity.length() * 3.6])
 	root.get_texture().get_image().save_png(_shot)
+	# Журнал пишется при уходе мира из дерева — удаляем файл после этого.
+	_world.queue_free()
+	await process_frame
+	await process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(JOURNAL))
 	quit(0)
