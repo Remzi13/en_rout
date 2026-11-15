@@ -1,11 +1,19 @@
 extends Node
-## Точка входа (game/main.tscn): главное меню, рекорды, настройки,
-## запуск сессии в открытом мире и меню паузы.
+## Точка входа (game/main.tscn): главное меню, настройки, запуск сессии
+## в открытом мире и меню паузы. «Продолжить» видно, только когда есть
+## сохранение журнала; «Новая игра» при сохранении спрашивает подтверждение
+## и стирает его.
+
+## Файл сохранения журнала (договор с задачей 2 среза).
+## TODO: заменить на Journal.has_save()/Journal.reset() после слияния с задачей 2
+const JOURNAL_PATH := "user://journal.json"
+## Сид для отладочного --autostart: одинаковые погода и трафик от запуска к запуску.
+const AUTOSTART_SEED := 1
 
 var world: OpenWorld
 var _ui: CanvasLayer
 var _screen: Control
-var _seed_edit: LineEdit
+var _confirm: Control
 var _paused_ui: Control
 var _loading: Label
 
@@ -15,18 +23,10 @@ func _ready() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 10
 	add_child(_ui)
-	var args := OS.get_cmdline_user_args()
-	if "--autostart" in args:
-		_start_game(_parse_seed_arg(args))
+	if "--autostart" in OS.get_cmdline_user_args():
+		_start_game(AUTOSTART_SEED)
 	else:
 		_show_main_menu()
-
-
-func _parse_seed_arg(args: PackedStringArray) -> int:
-	for a in args:
-		if a.begins_with("--seed="):
-			return int(a.trim_prefix("--seed="))
-	return 1
 
 
 func _clear_screen() -> void:
@@ -90,34 +90,103 @@ func _show_main_menu() -> void:
 	_clear_screen()
 	_screen = _backdrop()
 	_ui.add_child(_screen)
-	var v := _menu_column(_screen, "ОТРЫВ", "Аркадные погони в бесконечном мире")
-	v.add_child(UiTheme.label("Сид мира (пусто — случайный):", 18, Color(1, 1, 1, 0.7)))
-	_seed_edit = LineEdit.new()
-	_seed_edit.placeholder_text = "например, 12345"
-	_seed_edit.custom_minimum_size = Vector2(320, 46)
-	_seed_edit.text_submitted.connect(func(_t: String) -> void: _on_play())
-	v.add_child(_seed_edit)
-	var play := UiTheme.button("Играть", _on_play)
-	v.add_child(play)
-	v.add_child(UiTheme.button("Рекорды", _show_records))
+	var v := _menu_column(_screen, "ОТРЫВ", "Летняя дорога у озера")
+	var first: Button = null
+	if _has_save():
+		first = UiTheme.button("Продолжить", _on_continue)
+		v.add_child(first)
+	var new_game := UiTheme.button("Новая игра", _on_new_game)
+	v.add_child(new_game)
+	# Экрана журнала ещё нет (задача 5): кнопка видна, но неактивна.
+	var journal := UiTheme.button("Журнал · скоро", func() -> void: pass)
+	journal.disabled = true
+	journal.focus_mode = Control.FOCUS_NONE
+	journal.tooltip_text = "Экран журнала появится позже"
+	v.add_child(journal)
 	v.add_child(UiTheme.button("Настройки", func() -> void: _show_settings(_show_main_menu)))
 	v.add_child(UiTheme.button("Выход", func() -> void: get_tree().quit()))
-	play.grab_focus()
+	(first if first != null else new_game).grab_focus()
 
 
-func _on_play() -> void:
-	var text := _seed_edit.text.strip_edges() if _seed_edit != null else ""
-	var s := 0
-	if text == "":
-		s = randi() % 1000000
-	elif text.is_valid_int():
-		s = int(text)
-	else:
-		s = text.hash() % 1000000
-	_start_game(s)
+func _has_save() -> bool:
+	return FileAccess.file_exists(JOURNAL_PATH)
+
+
+func _on_continue() -> void:
+	_start_game(randi() % 1000000)
+
+
+func _on_new_game() -> void:
+	if not _has_save():
+		_start_game(randi() % 1000000)
+		return
+	_show_confirm_new_game()
+
+
+## Подтверждение поверх меню: «Стереть и начать» / «Отмена» (Esc — отмена).
+func _show_confirm_new_game() -> void:
+	_confirm = Control.new()
+	_confirm.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_confirm.theme = UiTheme.get_theme()
+	_screen.add_child(_confirm)
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0, 0, 0, 0.7)
+	_confirm.add_child(dim)
+	var panel := PanelContainer.new()
+	UiTheme.anchor(panel, Control.PRESET_CENTER, Rect2(-310, -150, 620, 300))
+	# Непрозрачная подложка: кнопки меню под окном не должны просвечивать.
+	var box := (UiTheme.get_theme().get_stylebox("panel", "PanelContainer") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	box.bg_color = Color(0.08, 0.09, 0.11)
+	box.border_color = Color(1, 1, 1, 0.15)
+	box.set_border_width_all(1)
+	panel.add_theme_stylebox_override("panel", box)
+	_confirm.add_child(panel)
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 14)
+	panel.add_child(v)
+	var t := UiTheme.label("Журнал будет стёрт", 32, UiTheme.ACCENT)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var hint := UiTheme.label("Записи о поездках и открытые места пропадут.", 20, Color(1, 1, 1, 0.7))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(hint)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	v.add_child(row)
+	var yes := UiTheme.button("Стереть и начать", _confirm_new_game)
+	yes.custom_minimum_size.x = 270
+	var no := UiTheme.button("Отмена", _close_confirm)
+	no.custom_minimum_size.x = 270
+	row.add_child(yes)
+	row.add_child(no)
+	# Стрелки вверх/вниз не уводят фокус на кнопки меню под окном.
+	for b: Button in [yes, no]:
+		b.focus_neighbor_top = b.get_path()
+		b.focus_neighbor_bottom = b.get_path()
+	no.grab_focus()
+
+
+func _close_confirm() -> void:
+	if _confirm != null:
+		_confirm.queue_free()
+		_confirm = null
+	_show_main_menu()
+
+
+func _confirm_new_game() -> void:
+	_confirm = null
+	# TODO: заменить на Journal.has_save()/Journal.reset() после слияния с задачей 2
+	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(JOURNAL_PATH))
+	if err != OK:
+		push_warning("Не удалось стереть %s: %s" % [JOURNAL_PATH, error_string(err)])
+	_start_game(randi() % 1000000)
 
 
 # --- Рекорды --------------------------------------------------------------
+# Из главного меню убраны; переедут в журнал (раздел «Погоня», задача 5).
 
 func _show_records() -> void:
 	_clear_screen()
@@ -178,7 +247,7 @@ func _show_settings(on_close: Callable) -> void:
 
 func _start_game(seed_value: int) -> void:
 	_clear_screen()
-	_loading = UiTheme.label("Загрузка мира…  сид %d" % seed_value, 36)
+	_loading = UiTheme.label("Загрузка мира…", 36)
 	UiTheme.anchor(_loading, Control.PRESET_CENTER, Rect2(-400, -30, 800, 60))
 	_loading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var bg := _backdrop()
@@ -221,7 +290,7 @@ func _pause() -> void:
 	get_tree().paused = true
 	_paused_ui = _backdrop()
 	_ui.add_child(_paused_ui)
-	var v := _menu_column(_paused_ui, "Пауза", "Сид мира: %d" % world.world_seed)
+	var v := _menu_column(_paused_ui, "Пауза")
 	var cont := UiTheme.button("Продолжить", _resume)
 	v.add_child(cont)
 	v.add_child(UiTheme.button("Настройки", func() -> void:
@@ -251,6 +320,10 @@ func _to_menu() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _confirm != null and event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_close_confirm()
+		return
 	if _paused_ui != null and _paused_ui.visible and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		get_viewport().set_input_as_handled()
 		_resume()
