@@ -1,7 +1,7 @@
 # 008. Утечка ColorRect при каждом показе главного меню
 
 - **Серьёзность:** cosmetic (WARNING при выходе, памяти почти не ест)
-- **Статус:** открыт. Было и на `main` до задачи 1. `game/main.gd`, `_backdrop()`.
+- **Статус:** исправлено, ветка fix-menu (лишний `glow` убран из `_backdrop()`; смоук с `--verbose` без утечек). Было и на `main` до задачи 1.
 
 ## Шаги
 `godot --headless --fixed-fps 60 --path . --quit-after 600 --verbose` (смоук из `tests/run_all.sh`).
