@@ -2,7 +2,8 @@
 # Карта из Blender -> чанки игры. Запуск из любого места:
 #   tools/export_map.sh
 #   BLENDER=/путь/к/blender GODOT=/путь/к/godot tools/export_map.sh
-# 1) Blender снимает с art/map/map.blend высоты, маски, дороги, старт и объекты Props
+# 1) Blender снимает с art/map/map.blend высоты, маски, дороги, старт, объекты Props,
+#    места Places и точки доставок Spots
 #    (tools/blender/export_map.py -> art/map/export/);
 # 2) Godot режет карту на чанки (tools/bake_world.gd -> game/world/chunks/,
 #    world.tscn, world_index.tres). Чанки перезаписываются целиком.

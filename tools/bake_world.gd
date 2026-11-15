@@ -13,7 +13,8 @@ extends SceneTree
 ## рельеф (сглаженный профиль, ограничение уклона), продавливает под ними
 ## землю, красит рельеф, расставляет растительность по маскам из Blender,
 ## ставит объекты из коллекции Props (tools/map_props.gd, docs/map-pipeline.md)
-## и режет всё на чанки по 256 м.
+## и режет всё на чанки по 256 м. Места и точки доставок (Places, Spots,
+## tools/map_places.gd) идут только в world_index.tres, высота — по рельефу.
 ##
 ## Чанки ПЕРЕЗАПИСЫВАЮТСЯ целиком: карта правится в Blender, а не в сценах.
 ## Запускать без --headless: в headless MultiMesh не отдаёт данные и
@@ -21,6 +22,7 @@ extends SceneTree
 
 const MaterialBuilder := preload("res://tools/material_builder.gd")
 const MapProps := preload("res://tools/map_props.gd")
+const MapPlaces := preload("res://tools/map_places.gd")
 const EXPORT_DIR := "res://art/map/export/"
 const ASSETS := "res://game/world/assets/"
 const CHUNKS := "res://game/world/chunks/"
@@ -62,6 +64,8 @@ var _roads: Array = [] ## [{points: PackedVector3Array, type: int}]
 var _nodes: Array = [] ## [{pos: Vector3, degree: int, highway: bool}]
 var _start := Transform3D()
 var _props: Dictionary = {} ## чанк -> [объект из MapProps.parse]
+var _places: Array[Dictionary] = [] ## MapPlaces.parse, для WorldIndex.places
+var _spots: Array[Dictionary] = [] ## MapPlaces.parse, для WorldIndex.spots
 
 
 func _initialize() -> void:
@@ -84,7 +88,13 @@ func _run() -> void:
 	_stamp_roads(pieces)
 	_place_start(data.get("start"))
 	var props := _group_props(data.get("props", []))
-	print("дорог: %d участков, узлов: %d, объектов: %d" % [_roads.size(), _nodes.size(), props])
+	# Высота мест и точек — по рельефу после продавливания под дорогами.
+	var ground := func(x: float, z: float) -> float: return _sample(_hgt, x, z)
+	var rect := Rect2(_x0, _z0, _chunks_n.x * CS, _chunks_n.y * CS)
+	_places = MapPlaces.parse(data.get("places", []), "Places", MapPlaces.PLACE_RADIUS_M, ground, rect)
+	_spots = MapPlaces.parse(data.get("spots", []), "Spots", MapPlaces.SPOT_RADIUS_M, ground, rect)
+	print("дорог: %d участков, узлов: %d, объектов: %d, мест: %d, точек: %d" % [
+		_roads.size(), _nodes.size(), props, _places.size(), _spots.size()])
 
 	_clear_chunks()
 	var coords: Array[Vector2i] = []
@@ -899,5 +909,5 @@ func _bake_world(coords: Array[Vector2i]) -> void:
 	# Индекс мира (что грузит игра) считается в глобальных координатах,
 	# поэтому сцену ненадолго ставим в дерево.
 	get_root().add_child(root)
-	WorldIndex.save_from(root)
+	WorldIndex.save_from(root, _places, _spots)
 	root.free()

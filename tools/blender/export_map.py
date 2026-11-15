@@ -3,11 +3,12 @@
 #   blender --background art/map/map.blend --python tools/blender/export_map.py
 # Результат — art/map/export/:
 #   map.json     — размеры мира и сетки, дороги (линии в XZ Godot), старт,
-#                  объекты из коллекции Props (см. docs/map-pipeline.md);
+#                  объекты из коллекции Props, места (Places) и точки
+#                  доставок (Spots) — см. docs/map-pipeline.md;
 #   heights.f32  — высоты рельефа на сетке 4 м (float32, строки по Z, little-endian);
 #   forest.u8, conifer.u8, rocks.u8 — маски из групп вершин Terrain (0..255).
 # Что читается из карты — см. tools/blender/make_map.py (Terrain, Roads,
-# PlayerStart) и docs/map-pipeline.md (Props). Мир — целые чанки по 256 м, покрытые рельефом Terrain.
+# PlayerStart) и docs/map-pipeline.md (Props, Places, Spots). Мир — целые чанки по 256 м, покрытые рельефом Terrain.
 # Оси: Godot (x, y, z) = Blender (x, z, -y).
 
 import json
@@ -231,6 +232,44 @@ def export_props():
     return props
 
 
+def export_points(coll_name, default_radius):
+    """Пустышки коллекции Places или Spots -> [{id, title, radius, pos}].
+    Нет коллекции — пустой список. Пустой или повторный id — пропуск.
+    Высоту по рельефу ставит запекание (Godot)."""
+    coll = bpy.data.collections.get(coll_name)
+    if coll is None:
+        return []
+    out = []
+    seen = set()
+    for obj in sorted(coll.all_objects, key=lambda o: o.name):
+        if obj.type != "EMPTY":
+            continue
+        pid = str(obj.get("id", "")).strip()
+        if not pid:
+            print("Внимание: %s/%s: нет свойства id — пропускаю" % (coll_name, obj.name))
+            continue
+        if pid in seen:
+            print("Внимание: %s/%s: id «%s» уже занят — пропускаю" % (coll_name, obj.name, pid))
+            continue
+        seen.add(pid)
+        try:
+            radius = float(obj.get("radius", default_radius))
+        except (TypeError, ValueError):
+            radius = -1.0
+        if radius <= 0.0:
+            print("Внимание: %s/%s: плохой radius, беру %g" % (coll_name, obj.name, default_radius))
+            radius = default_radius
+        p = obj.matrix_world.translation
+        out.append({
+            "id": pid,
+            "title": str(obj.get("title", "")).strip() or pid,
+            "radius": round(radius, 3),
+            # Оси: Godot (x, y, z) = Blender (x, z, -y).
+            "pos": [round(p.x, 3), round(p.z, 3), round(-p.y, 3)],
+        })
+    return out
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -239,11 +278,13 @@ def main():
     data["roads"] = export_roads()
     data["start"] = export_start()
     data["props"] = export_props()
+    data["places"] = export_points("Places", 25.0)
+    data["spots"] = export_points("Spots", 8.0)
     with open(os.path.join(OUT_DIR, "map.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
-    print("Экспорт карты: %d×%d чанков, сетка %d×%d, дорог %d, объектов %d -> %s" % (
+    print("Экспорт карты: %d×%d чанков, сетка %d×%d, дорог %d, объектов %d, мест %d, точек %d -> %s" % (
         data["chunks"][0], data["chunks"][1], data["grid"][0], data["grid"][1], len(data["roads"]),
-        len(data["props"]), OUT_DIR))
+        len(data["props"]), len(data["places"]), len(data["spots"]), OUT_DIR))
 
 
 main()

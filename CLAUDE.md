@@ -7,7 +7,7 @@
 - `docs/concept.md` — главный документ, остальные ему подчиняются.
 - `docs/vertical-slice.md` — план и статус задач текущего этапа.
 - `docs/roadmap.md` — что отложено и что сделано (с датой).
-- `docs/map-pipeline.md` — карта из Blender в игру: коллекции и свойства пустышек (`Props`).
+- `docs/map-pipeline.md` — карта из Blender в игру: коллекции и свойства пустышек (`Props`, `Places`, `Spots`).
 - `docs/visual-style.md`, `docs/scale.md` — стиль и размеры, обязательны для моделей и карты.
 - `docs/qa/bugs/NNN-коротко.md` — баги, номер следующий по порядку.
 
