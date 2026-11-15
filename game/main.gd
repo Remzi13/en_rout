@@ -4,9 +4,6 @@ extends Node
 ## сохранение журнала; «Новая игра» при сохранении спрашивает подтверждение
 ## и стирает его.
 
-## Файл сохранения журнала (договор с задачей 2 среза).
-## TODO: заменить на Journal.has_save()/Journal.reset() после слияния с задачей 2
-const JOURNAL_PATH := "user://journal.json"
 ## Сид для отладочного --autostart: одинаковые погода и трафик от запуска к запуску.
 const AUTOSTART_SEED := 1
 
@@ -109,7 +106,7 @@ func _show_main_menu() -> void:
 
 
 func _has_save() -> bool:
-	return FileAccess.file_exists(JOURNAL_PATH)
+	return Journal.has_save()
 
 
 func _on_continue() -> void:
@@ -178,10 +175,7 @@ func _close_confirm() -> void:
 
 func _confirm_new_game() -> void:
 	_confirm = null
-	# TODO: заменить на Journal.has_save()/Journal.reset() после слияния с задачей 2
-	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(JOURNAL_PATH))
-	if err != OK:
-		push_warning("Не удалось стереть %s: %s" % [JOURNAL_PATH, error_string(err)])
+	Journal.reset()
 	_start_game(randi() % 1000000)
 
 
