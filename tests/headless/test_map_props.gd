@@ -35,10 +35,12 @@ func _run() -> void:
 	var xf: Transform3D = house["transform"]
 	H.check("имя узла очищено от недопустимых символов", house["name"] == "Дом_001", house["name"])
 	H.check("позиция из записи", xf.origin.is_equal_approx(Vector3(300.5, 12.0, -40.0)), "%s" % xf.origin)
-	# yaw 90° вокруг Y: локальная X (масштаб 2) смотрит в -Z мира.
-	H.check("поворот вокруг вертикали и масштаб по осям модели",
-		xf.basis.x.is_equal_approx(Vector3(0, 0, -2)) and xf.basis.z.is_equal_approx(Vector3(1, 0, 0)),
+	# yaw 90° вокруг Y: локальная X смотрит в -Z мира; масштаб — отдельно.
+	H.check("поворот вокруг вертикали без масштаба",
+		xf.basis.x.is_equal_approx(Vector3(0, 0, -1)) and xf.basis.z.is_equal_approx(Vector3(1, 0, 0)),
 		"x %s, z %s" % [xf.basis.x, xf.basis.z])
+	H.check("масштаб по осям модели", (house["scale"] as Vector3).is_equal_approx(Vector3(2, 1, 1)),
+		"%s" % house["scale"])
 	H.check("collision по умолчанию и неизвестное значение — box",
 		props[0]["collision"] == "box" and props[2]["collision"] == "box" and props[1]["collision"] == "none")
 	H.check("snap_to_ground читается", props[1]["snap"] == true and props[0]["snap"] == false)
@@ -47,7 +49,18 @@ func _run() -> void:
 	var origin := Vector3(256, 0, -256)
 	var flat := func(_x: float, _z: float) -> float: return 0.0
 	var node := MapProps.build(house, origin, flat)
-	var box := MapProps.model_aabb(node.get_node("Model") as Node3D)
+	var model := node.get_node("Model") as Node3D
+	var box := MapProps.model_aabb(model)
+	# AABB той же модели без масштаба: коробка должна быть шире ровно по X.
+	var plain := (load(VAN) as PackedScene).instantiate() as Node3D
+	var raw := MapProps.model_aabb(plain)
+	plain.free()
+	H.check("масштаб на модели, у тела — 1", model.scale.is_equal_approx(Vector3(2, 1, 1))
+		and node.basis.get_scale().is_equal_approx(Vector3.ONE), "модель %s, тело %s" % [model.scale, node.basis.get_scale()])
+	H.check("коробка учитывает неравный масштаб [2,1,1]",
+		box.size.is_equal_approx(raw.size * Vector3(2, 1, 1))
+		and box.get_center().is_equal_approx(raw.get_center() * Vector3(2, 1, 1)),
+		"коробка %s, модель %s" % [box.size, raw.size])
 	H.check("узел в координатах чанка", node.position.is_equal_approx(Vector3(44.5, 12.0, 216.0)), "%s" % node.position)
 	var body := node as StaticBody3D
 	var shape_ok := false
