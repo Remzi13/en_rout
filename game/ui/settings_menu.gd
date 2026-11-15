@@ -42,7 +42,7 @@ func _ready() -> void:
 		row.add_child(b)
 		_key_buttons[action] = b
 		v.add_child(row)
-	v.add_child(UiTheme.label("Геймпад: левый стик — руль, триггеры — газ/тормоз, A — ручник, X — погоня, Y — на дорогу, B — взять / сдать", 16, Color(1, 1, 1, 0.6)))
+	v.add_child(UiTheme.label("Геймпад: левый стик — руль, триггеры — газ/тормоз, A — ручник, X — погоня, Y — на дорогу, B — взять / сдать, Back — карта", 16, Color(1, 1, 1, 0.6)))
 	var reset := UiTheme.button("Сбросить клавиши", func() -> void:
 		GameState.reset_bindings()
 		_refresh_keys())
