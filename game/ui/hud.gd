@@ -2,6 +2,7 @@ class_name GameHud
 extends CanvasLayer
 ## HUD: спидометр, мини-карта, шкалы отрыва и захвата во время погони,
 ## счёт, время суток и погода, всплывающие сообщения и итог погони.
+## Места и доставки — TaskHud (подсказка, надписи, строка цели) и метки радара.
 
 var world: OpenWorld
 
@@ -25,6 +26,8 @@ var _hint: Label
 var _hint_t: float = 12.0
 var _respawn_hint: Label
 var _next_chase: Label
+var tasks: TaskHud
+var radar: Radar
 
 
 func setup(w: OpenWorld) -> void:
@@ -52,8 +55,10 @@ func setup(w: OpenWorld) -> void:
 	sp.add_child(_surface)
 
 	# Мини-карта — слева внизу.
-	var radar := Radar.new()
+	radar = Radar.new()
 	radar.world = w
+	radar.places = w.places
+	radar.deliveries = w.deliveries
 	UiTheme.anchor(radar, Control.PRESET_BOTTOM_LEFT, Rect2(Vector2(30, -270), Vector2(240, 240)))
 	radar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(radar)
@@ -106,6 +111,11 @@ func setup(w: OpenWorld) -> void:
 		_k("accelerate"), _k("brake"), _k("steer_left"), _k("steer_right"), _k("handbrake"),
 		_k("respawn"), _k("call_chase"), _k("pause")]
 	root.add_child(_hint)
+
+	tasks = TaskHud.new()
+	tasks.name = "Tasks"
+	root.add_child(tasks)
+	tasks.setup(w.places, w.deliveries)
 
 	_result = PanelContainer.new()
 	UiTheme.anchor(_result, Control.PRESET_CENTER, Rect2(Vector2(-260, -110), Vector2(520, 220)))

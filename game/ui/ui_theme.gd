@@ -6,6 +6,12 @@ const ACCENT := Color(1.0, 0.55, 0.1)
 const DANGER := Color(1.0, 0.22, 0.2)
 const OK := Color(0.3, 0.95, 0.5)
 const PANEL := Color(0.05, 0.06, 0.08, 0.82)
+## Доставки и места (радар, подсказки): цель — тёплый жёлтый (не оранжевый
+## игрока и не красный погони), точка взятия — светлый песочный, место —
+## приглушённый голубой. Все светлые: читаются на тёмном радаре и ночью.
+const GOAL := Color(1.0, 0.84, 0.28)
+const PICKUP := Color(0.96, 0.9, 0.72)
+const PLACE := Color(0.6, 0.85, 0.95)
 
 static var _theme: Theme
 
@@ -52,6 +58,20 @@ static func get_theme() -> Theme:
 	bar_bg.set_corner_radius_all(4)
 	_theme.set_stylebox("background", "ProgressBar", bar_bg)
 	return _theme
+
+
+## Плашка под короткой подсказкой поверх игры.
+static func chip() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(PANEL, 0.7)
+	sb.border_color = Color(ACCENT, 0.55)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 18
+	sb.content_margin_right = 18
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	return sb
 
 
 ## Привязка к якорю с отступами: rect задаёт смещения от точки якоря.
