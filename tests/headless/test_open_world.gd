@@ -30,6 +30,7 @@ func _run() -> void:
 	var gs: Node = root.get_node("GameState")
 	gs.save_path = "user://test_save_world.json"
 	world = OpenWorldScript.create(42)
+	world.journal_path = "user://test_journal_world.json"
 	var t_load := Time.get_ticks_msec()
 	root.add_child(world)
 	# Ждём по реальному времени: чанки читаются с диска, а кадры в headless
@@ -148,7 +149,9 @@ func _run() -> void:
 	await _frames(60)
 	H.check("респаун ставит на дорогу", p.on_road and p.grounded_wheels >= 3)
 
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_save_world.json"))
+	H.check("журнал считает путь машины", world.journal.distance_m > 10.0, "%.0f м" % world.journal.distance_m)
 	world.queue_free()
 	await _frames(5)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_save_world.json"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_journal_world.json"))
 	H.finish(self)
