@@ -19,7 +19,7 @@ extends Control
 signal opened
 signal closed
 
-const BASE_PATH := "res://game/world/map_base.png"
+const BASE_PATH := "res://game/world/map_base.png" ## тот же путь, что MapBase.PATH в tools/map_base.gd
 const FADE_IN_S := 0.2
 ## Поля вокруг карты в пикселях холста (холст 1920×1080, canvas_items).
 const MARGIN_TOP_PX := 92.0
@@ -135,6 +135,14 @@ static func heading_dir(yaw: float) -> Vector2:
 	return Vector2(-sin(yaw), -cos(yaw))
 
 
+## Курс машины на карте по её базису: «вперёд» (−Z) без наклона.
+## Надёжнее угла Эйлера, когда машина перевернулась или сильно накренилась.
+static func heading_of(basis: Basis) -> Vector2:
+	var fwd := -basis.z
+	var flat := Vector2(fwd.x, fwd.z)
+	return flat.normalized() if flat.length() > 0.001 else Vector2(0, -1)
+
+
 ## Поле для карты внутри экрана размера screen.
 static func map_area(screen: Vector2) -> Rect2:
 	return Rect2(MARGIN_SIDE_PX, MARGIN_TOP_PX,
@@ -237,7 +245,7 @@ func marks() -> Array[Dictionary]:
 			out.append({"kind": MARK_GOAL, "pos": _to_screen(deliveries.target_position()), "title": ""})
 	if player != null and is_instance_valid(player) and player.is_inside_tree():
 		out.append({"kind": MARK_PLAYER, "pos": _to_screen(player.global_position), "title": "",
-			"dir": heading_dir(player.global_rotation.y)})
+			"dir": heading_of(player.global_basis)})
 	return out
 
 
@@ -331,7 +339,7 @@ func _draw_marks(list: Array[Dictionary]) -> void:
 
 
 func _draw_flag(q: Vector2, s: float = 1.3) -> void:
-	var pole := [q + Vector2(-4, 8) * s, q + Vector2(-4, -10) * s]
+	var pole: PackedVector2Array = [q + Vector2(-4, 8) * s, q + Vector2(-4, -10) * s]
 	var flag := PackedVector2Array([q + Vector2(-4, -10) * s, q + Vector2(8, -5.5) * s, q + Vector2(-4, -1) * s])
 	draw_line(pole[0], pole[1], OUTLINE, 6.0)
 	draw_colored_polygon(PackedVector2Array([flag[0] + Vector2(-2, -2.5), flag[1] + Vector2(3.5, 0), flag[2] + Vector2(-2, 2.5)]), OUTLINE)
@@ -370,7 +378,7 @@ func _draw_labels(labels: Array[Dictionary], taken: Array[Rect2]) -> void:
 		var sz := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		var q: Vector2 = l["pos"]
 		var h := sz.y
-		var tries := [Vector2(14, -h * 0.5), Vector2(-14 - sz.x, -h * 0.5), Vector2(14, h * 0.5), Vector2(14, -h * 1.5),
+		var tries: Array[Vector2] = [Vector2(14, -h * 0.5), Vector2(-14 - sz.x, -h * 0.5), Vector2(14, h * 0.5), Vector2(14, -h * 1.5),
 			Vector2(-14 - sz.x, h * 0.5), Vector2(-14 - sz.x, -h * 1.5), Vector2(14, h * 1.5), Vector2(14, -h * 2.5)]
 		var at: Rect2 = Rect2(q + tries[0], sz)
 		for off: Vector2 in tries:
@@ -398,7 +406,7 @@ func _draw_north() -> void:
 
 ## Легенда одной строкой внизу по центру: значок и подпись.
 func _draw_legend() -> void:
-	var items := [["player", "Я"], ["goal", "Цель"], ["pickup", "Взять груз"], ["place", "Место"],
+	var items: Array[Array] = [["player", "Я"], ["goal", "Цель"], ["pickup", "Взять груз"], ["place", "Место"],
 		["unknown", "Не открыто"], ["asphalt", "Асфальт"], ["dirt", "Грунтовка"]]
 	var fs := 20
 	var icon_w := 30.0

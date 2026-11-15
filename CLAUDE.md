@@ -23,7 +23,7 @@
 
 - Все тесты: `tests/run_all.sh`. Один: `tests/run_all.sh test_world_map`. Логи в `tests/.logs/`.
 - Импорт после новых файлов или `class_name`: `"$GODOT" --headless --path . --import`.
-- Карта из Blender в чанки: `tools/export_map.sh` (пересобирает все чанки, ~10 с).
+- Карта из Blender в чанки: `tools/export_map.sh` (пересобирает все чанки, ~13 с, вместе с подложкой карты).
 - Модели генерируются скриптами Blender в `tools/blender/` (`make_cars.py`, `make_trees.py`) и выгружаются в `.glb`. Новые модели делаются так же, а не руками.
 - Снимок кадра: по образцу `--shot=файл.png` в `game/terrain_test/terrain_test.gd` или `tools/preview_cars.gd`. Снимки класть в scratchpad, не в репозиторий.
 

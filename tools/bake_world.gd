@@ -815,7 +815,8 @@ func _bake_map_base(coords: Array[Vector2i]) -> void:
 		"x0": _x0, "z0": _z0, "step": GRID_STEP}
 	var img := MapBase.render(grid, WorldDefs.rect_of_chunks(coords))
 	var err := img.save_png(MapBase.PATH)
-	assert(err == OK)
+	if err != OK:
+		push_error("Не удалось сохранить подложку %s: %s" % [MapBase.PATH, error_string(err)])
 	print("подложка карты: %s, %d × %d" % [MapBase.PATH, img.get_width(), img.get_height()])
 
 

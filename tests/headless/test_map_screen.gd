@@ -88,6 +88,8 @@ func _run() -> void:
 	H.check("вытянутый мир: по ширине, по центру по высоте", wide == Rect2(0, 250, 1000, 500), str(wide))
 	H.check("пустой мир не делит на ноль", cls.fit_rect(Rect2(), area).size == Vector2.ZERO
 		and cls.world_to_screen(Vector3(5, 0, 5), Rect2(), Rect2(10, 10, 0, 0)) == Vector2(10, 10))
+	H.check("курс по базису совпадает с курсом по углу", _near(cls.heading_of(Basis(Vector3.UP, 0.7)), cls.heading_dir(0.7)))
+	H.check("курс по базису с креном не прыгает", _near(cls.heading_of(Basis(Vector3.UP, 0.7) * Basis(Vector3.FORWARD, 2.5)), cls.heading_dir(0.7)))
 	H.check("курс: yaw 0 — вверх (на север)", _near(cls.heading_dir(0.0), Vector2(0, -1)), str(cls.heading_dir(0.0)))
 	# Поворот на +90° вокруг Y: −Z локально смотрит в −X мира — влево.
 	H.check("курс: yaw +90° — влево (на запад)", _near(cls.heading_dir(PI * 0.5), Vector2(-1, 0)), str(cls.heading_dir(PI * 0.5)))
@@ -139,7 +141,7 @@ func _run() -> void:
 	await _frames(1)
 	var r: Rect2 = map.map_rect()
 	H.check("прямоугольник карты по размеру экрана", r == cls.fit_rect(wr, cls.map_area(map.size)), str(r))
-	H.check("без подложки — однотонный фон (текстуры нет)", map.base_texture == null or ResourceLoader.exists(cls.BASE_PATH))
+	H.check("без подложки — нет текстуры, карта не падает", cls.load_base("res://нет/такой/подложки.png") == null)
 	H.check("дороги из сводки: обе", map._roads.size() == 2 and map._roads[0]["type"] == WorldDefs.RoadType.HIGHWAY
 		and map._roads[1]["type"] == WorldDefs.RoadType.DIRT, str(map._roads.size()))
 	H.check("асфальт шире грунтовки", map._road_width(WorldDefs.RoadType.HIGHWAY) > map._road_width(WorldDefs.RoadType.DIRT))

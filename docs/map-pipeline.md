@@ -1,6 +1,6 @@
 # Карта: из Blender в игру
 
-Как то, что стоит в `art/map/map.blend`, попадает в игру. Цепочка запускается одной командой `tools/export_map.sh` (~10 с):
+Как то, что стоит в `art/map/map.blend`, попадает в игру. Цепочка запускается одной командой `tools/export_map.sh` (~13 с, вместе с подложкой карты):
 
 1. `tools/blender/export_map.py` снимает с карты данные в `art/map/export/` (`map.json`, высоты, маски растительности; в `map.json` — дороги, старт, объекты `Props`, места `Places` и точки `Spots`).
 2. `tools/bake_world.gd` режет мир на чанки 256 × 256 м: `game/world/chunks/chunk_X_Z.tscn`, `game/world/world.tscn`, `game/world/world_index.tres` — и рисует подложку карты-схемы `game/world/map_base.png` (см. «Подложка карты»).
