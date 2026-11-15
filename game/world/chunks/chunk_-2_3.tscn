@@ -55,38 +55,38 @@ size = Vector3(5, 3.91, 4)
 [sub_resource type="BoxShape3D" id="BoxShape3D_1ye5v"]
 size = Vector3(4.24, 4.26, 6.0299997)
 
-[node name="Chunk_-2_3" type="Node3D" unique_id=1331522373]
+[node name="Chunk_-2_3" type="Node3D" unique_id=1041890867]
 script = ExtResource("1_qvlyn")
 coord = Vector2i(-2, 3)
 
-[node name="Terrain" type="MeshInstance3D" parent="." unique_id=1148417208]
+[node name="Terrain" type="MeshInstance3D" parent="." unique_id=1876590496]
 mesh = ExtResource("2_q3x4r")
 
-[node name="TerrainBody" type="StaticBody3D" parent="." unique_id=652139257]
+[node name="TerrainBody" type="StaticBody3D" parent="." unique_id=1330225766]
 collision_mask = 0
 metadata/surface = 2
 
-[node name="Shape" type="CollisionShape3D" parent="TerrainBody" unique_id=474410676]
+[node name="Shape" type="CollisionShape3D" parent="TerrainBody" unique_id=1226230758]
 shape = ExtResource("3_u1idd")
 
-[node name="Water" type="MeshInstance3D" parent="." unique_id=2012466656]
+[node name="Water" type="MeshInstance3D" parent="." unique_id=1827610933]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 0)
 cast_shadow = 0
 mesh = ExtResource("4_2x1f5")
 
-[node name="Roads" type="Node3D" parent="." unique_id=2131700976]
+[node name="Roads" type="Node3D" parent="." unique_id=1857303250]
 
-[node name="Road0" type="Path3D" parent="Roads" unique_id=1191597461]
+[node name="Road0" type="Path3D" parent="Roads" unique_id=438463370]
 curve = SubResource("Curve3D_1wvd1")
 script = ExtResource("5_fae80")
 road_type = 1
 uv_offset_m = 67.90509
 
-[node name="Junctions" type="Node3D" parent="." unique_id=1004160770]
+[node name="Junctions" type="Node3D" parent="." unique_id=103013241]
 
-[node name="Vegetation" type="Node3D" parent="." unique_id=1387073419]
+[node name="Vegetation" type="Node3D" parent="." unique_id=1714696928]
 
-[node name="Conifers" type="MultiMeshInstance3D" parent="Vegetation" unique_id=637210624]
+[node name="Conifers" type="MultiMeshInstance3D" parent="Vegetation" unique_id=224761911]
 visibility_range_end = 520.0
 visibility_range_end_margin = 20.0
 multimesh = SubResource("MultiMesh_ni27d")
@@ -94,7 +94,7 @@ script = ExtResource("6_q63e8")
 collider_radius = 0.35
 tree_preset = 1
 
-[node name="Trees" type="MultiMeshInstance3D" parent="Vegetation" unique_id=874956230]
+[node name="Trees" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1907778024]
 visibility_range_end = 520.0
 visibility_range_end_margin = 20.0
 multimesh = SubResource("MultiMesh_yhxfo")
@@ -102,7 +102,7 @@ script = ExtResource("6_q63e8")
 collider_radius = 0.35
 tree_preset = 2
 
-[node name="Rocks" type="MultiMeshInstance3D" parent="Vegetation" unique_id=355350418]
+[node name="Rocks" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1198110636]
 visibility_range_end = 380.0
 visibility_range_end_margin = 20.0
 multimesh = SubResource("MultiMesh_gido7")
@@ -111,7 +111,7 @@ collider_radius = 0.8
 collider_height = 0.9
 collider_min_scale = 1.0
 
-[node name="Bushes" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1566371857]
+[node name="Bushes" type="MultiMeshInstance3D" parent="Vegetation" unique_id=1076559145]
 cast_shadow = 0
 visibility_range_end = 220.0
 visibility_range_end_margin = 20.0
@@ -119,34 +119,34 @@ multimesh = SubResource("MultiMesh_ya10k")
 script = ExtResource("6_q63e8")
 collider_height = 0.0
 
-[node name="Props" type="Node3D" parent="." unique_id=1329387641]
+[node name="Props" type="Node3D" parent="." unique_id=1796510178]
 
-[node name="Farm_Barn" type="StaticBody3D" parent="Props" unique_id=1250131823]
+[node name="Farm_Barn" type="StaticBody3D" parent="Props" unique_id=1794465583]
 transform = Transform3D(0.99931484, 0, -0.037011545, 0, 1, 0, 0.037011545, 0, 0.99931484, 201, 6.6752195, 56)
 collision_mask = 0
 
-[node name="Shape" type="CollisionShape3D" parent="Props/Farm_Barn" unique_id=1892838446]
+[node name="Shape" type="CollisionShape3D" parent="Props/Farm_Barn" unique_id=625886454]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.734, -0.1500001)
 shape = SubResource("BoxShape3D_8i8bp")
 
-[node name="Model" parent="Props/Farm_Barn" unique_id=973781002 instance=ExtResource("9_i2uyx")]
+[node name="Model" parent="Props/Farm_Barn" unique_id=392819834 instance=ExtResource("9_i2uyx")]
 
-[node name="Farm_House_A" type="StaticBody3D" parent="Props" unique_id=1950136280]
+[node name="Farm_House_A" type="StaticBody3D" parent="Props" unique_id=551299961]
 transform = Transform3D(0.38074917, 0, -0.9246784, 0, 1, 0, 0.9246784, 0, 0.38074917, 185, 7.7417107, 36)
 collision_mask = 0
 
-[node name="Shape" type="CollisionShape3D" parent="Props/Farm_House_A" unique_id=2076526244]
+[node name="Shape" type="CollisionShape3D" parent="Props/Farm_House_A" unique_id=1471566491]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.955, -0.049999952)
 shape = SubResource("BoxShape3D_udf3l")
 
-[node name="Model" parent="Props/Farm_House_A" unique_id=1728222118 instance=ExtResource("10_0qfm2")]
+[node name="Model" parent="Props/Farm_House_A" unique_id=1187363206 instance=ExtResource("10_0qfm2")]
 
-[node name="Farm_House_B" type="StaticBody3D" parent="Props" unique_id=804888224]
+[node name="Farm_House_B" type="StaticBody3D" parent="Props" unique_id=765508809]
 transform = Transform3D(0.46788517, 0, 0.88378924, 0, 1, 0, -0.88378924, 0, 0.46788517, 219, 7.4363647, 38)
 collision_mask = 0
 
-[node name="Shape" type="CollisionShape3D" parent="Props/Farm_House_B" unique_id=2026906257]
+[node name="Shape" type="CollisionShape3D" parent="Props/Farm_House_B" unique_id=1975666484]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.13, -0.43500018)
 shape = SubResource("BoxShape3D_1ye5v")
 
-[node name="Model" parent="Props/Farm_House_B" unique_id=1869580972 instance=ExtResource("11_rliou")]
+[node name="Model" parent="Props/Farm_House_B" unique_id=2031053431 instance=ExtResource("11_rliou")]

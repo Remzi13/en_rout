@@ -26,32 +26,32 @@ places = Array[Dictionary]([{
 }])
 spots = Array[Dictionary]([{
 "id": "east_pier",
-"position": Vector3(-469, -2.0353355, 266),
-"radius": 8.0,
+"position": Vector3(-474.97, -1.8333709, 268.578),
+"radius": 9.0,
 "title": "Причал на том берегу"
 }, {
 "id": "far_farm",
-"position": Vector3(-310, 8.06119, 797),
+"position": Vector3(-309.027, 8.0409, 789.162),
 "radius": 9.0,
 "title": "Хутор на холмах"
 }, {
 "id": "fishing_camp",
-"position": Vector3(-591, -1.5928847, 512),
-"radius": 8.0,
+"position": Vector3(-585.4, -1.5358585, 503.504),
+"radius": 9.0,
 "title": "Рыбацкий лагерь"
 }, {
 "id": "net_shed",
-"position": Vector3(-259, 13.336607, 340),
-"radius": 7.0,
+"position": Vector3(-247.856, 13.133514, 350.647),
+"radius": 9.0,
 "title": "Склад сетей"
 }, {
 "id": "shop",
-"position": Vector3(-258.057, 13.869872, 319.706),
-"radius": 8.0,
+"position": Vector3(-247.343, 13.86411, 318.608),
+"radius": 9.0,
 "title": "Лавка"
 }, {
 "id": "smokehouse",
-"position": Vector3(-190.498, 13.427139, 299.603),
-"radius": 8.0,
+"position": Vector3(-191.884, 13.427086, 295.85),
+"radius": 9.0,
 "title": "Коптильня"
 }])
