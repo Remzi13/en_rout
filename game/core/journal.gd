@@ -120,12 +120,15 @@ func add_entry(kind: String, text: String, hour: float, weather: String, id: Str
 
 
 ## Отмечает место открытым и сохраняет журнал; false — уже было открыто.
-## Запись о месте добавляется отдельно через add_entry(KIND_PLACE, ...).
-func open_place(id: String) -> bool:
+## Запись о месте добавляется отдельно через add_entry(KIND_PLACE, ...);
+## persist = false — не сохранять сразу, когда следом идёт add_entry (он
+## сохранит всё одной записью на диск).
+func open_place(id: String, persist: bool = true) -> bool:
 	if places.has(id):
 		return false
 	places[id] = true
-	save()
+	if persist:
+		save()
 	return true
 
 

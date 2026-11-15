@@ -7,6 +7,13 @@ extends SceneTree
 
 const H := preload("res://tests/headless/helper.gd")
 const PATH := "user://test_deliveries.json"
+const TEST_DIR := "res://tests/data/missions"
+## Доставки среза из таблицы «Состав среза» (docs/vertical-slice.md).
+const SLICE := {
+	"smoked_fish": [1, "smokehouse", "far_farm"],
+	"nets": [2, "net_shed", "east_pier"],
+	"boat_motor": [3, "shop", "fishing_camp"],
+}
 
 
 ## Как TripStats.add_event, но с заданными временем и погодой.
@@ -38,6 +45,13 @@ func _def(id: String, cargo: String, from: String, to: String, order: int) -> De
 	return d
 
 
+## Доставка совпадает с таблицей «Состав среза» и заполнена.
+func _is_slice_def(d: DeliveryDef) -> bool:
+	var want: Variant = SLICE.get(d.id)
+	return want != null and d.order == want[0] and d.from_spot == want[1] and d.to_spot == want[2] \
+		and d.cargo != "" and d.journal_text != ""
+
+
 func _make(j: Journal, sink: Object) -> Deliveries:
 	var spots := [_spot("smokehouse", 0, 0), _spot("far_end", 500, 0), _spot("store", 100, 100, 10.0),
 		_spot("pier", -200, 50), _spot("workshop", 0, 300)]
@@ -51,11 +65,16 @@ func _make(j: Journal, sink: Object) -> Deliveries:
 
 func _run() -> void:
 	await process_frame
-	# Ресурсы из game/missions.
-	var all := DeliveryDef.load_all()
-	H.check("доставки грузятся из game/missions", all.size() >= 1 and all[0].order == 1, "%d шт." % all.size())
-	H.check("заглушка delivery_test на месте", all.any(func(d: DeliveryDef) -> bool:
-		return d.id == "test" and d.from_spot == "test_from" and d.to_spot == "test_to"))
+	# Ресурсы из game/missions: ровно три доставки среза, order 1, 2, 3.
+	var game_defs := DeliveryDef.load_all()
+	var orders := game_defs.map(func(d: DeliveryDef) -> int: return d.order)
+	var slice_ok := game_defs.size() == SLICE.size() and game_defs.all(_is_slice_def)
+	H.check("в game/missions три доставки среза с order 1, 2, 3", orders == [1, 2, 3] and slice_ok,
+		str(game_defs.map(func(d: DeliveryDef) -> String: return "%s:%d" % [d.id, d.order])))
+	# Тестовые данные — отдельная папка.
+	var all := DeliveryDef.load_all(TEST_DIR)
+	H.check("load_all(dir) грузит тестовую доставку", all.size() == 1 and all[0].id == "test"
+		and all[0].from_spot == "test_from" and all[0].to_spot == "test_to")
 	H.check("нет папки — пустой список", DeliveryDef.load_all("res://нет_такой").is_empty())
 
 	# Нет данных — ничего не падает.
@@ -152,14 +171,54 @@ func _run() -> void:
 		and dl2.available_spots().is_empty() and dl2.active == null and not dl2.interact_at(Vector3(0, 0, 0), 0.0))
 	dl2.free()
 
-	# Активная из журнала, которой больше нет (или уже сделана), — сбрасывается.
+	# Активная из журнала, уже сделанная, — сбрасывается.
 	var j3 := Journal.load_or_new(PATH)
-	j3.active_delivery = "removed_one"
+	j3.active_delivery = "nets"
 	var dl3 := _make(j3, null)
 	dl3.start()
-	H.check("неизвестная активная сброшена, первая не выдана (журнал не пустой)",
-		dl3.active == null and j3.active_delivery == "")
+	H.check("сделанная активная сброшена", dl3.active == null and j3.active_delivery == "")
 	dl3.free()
+
+	# Активная, которой нет среди годных (убрана или нет точки), не теряется.
+	Journal.reset(PATH)
+	var j4 := Journal.load_or_new(PATH)
+	j4.active_delivery = "ghost"
+	j4.save()
+	var dl4 := _make(j4, null)
+	dl4.start()
+	H.check("неизвестная активная: в сессии не активна, поле и файл не тронуты",
+		dl4.active == null and j4.active_delivery == "ghost"
+		and Journal.load_or_new(PATH).active_delivery == "ghost")
+	H.check("поверх зависшей первая не выдана, но взять другие можно",
+		dl4.available_spots().size() == 3 and dl4.interact_at(Vector3(108, 0, 100), 0.0)
+		and dl4.active.id == "nets" and Journal.load_or_new(PATH).active_delivery == "nets")
+	dl4.free()
+	# Точка вернулась — «Продолжить» подхватывает.
+	var j5 := Journal.load_or_new(PATH)
+	j5.active_delivery = "ghost"
+	var dl5 := _make(j5, null)
+	dl5.setup(j5, null, [_spot("nowhere", 50, 50), _spot("pier", -200, 50)],
+		[_def("ghost", "ничего", "nowhere", "pier", 4)], null)
+	dl5.start()
+	H.check("точка вернулась — активная снова подхвачена", dl5.active != null and dl5.active.id == "ghost")
+	dl5.free()
+	# Пустой журнал с зависшей активной: первая всё равно не выдаётся.
+	Journal.reset(PATH)
+	var j6 := Journal.load_or_new(PATH)
+	j6.active_delivery = "ghost"
+	var dl6 := _make(j6, null)
+	dl6.start()
+	H.check("пустой журнал с зависшей активной: первая не выдана", dl6.active == null
+		and j6.active_delivery == "ghost")
+	dl6.free()
+
+	# Кеш сделанных обновляется по entry_added.
+	var dl7 := _make(j6, null)
+	dl7.start()
+	j6.add_entry(Journal.KIND_DELIVERY, "x", 12.0, Journal.WEATHER_CLEAR, "motor")
+	H.check("кеш сделанных обновлён по entry_added", dl7.is_done(dl7.find("motor"))
+		and dl7.available_spots().size() == 2)
+	dl7.free()
 
 	# Старый журнал без id и active_delivery читается.
 	var f := FileAccess.open(PATH, FileAccess.WRITE)

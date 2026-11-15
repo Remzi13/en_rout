@@ -8,6 +8,11 @@ extends Node
 ## Состояние живёт в журнале: сделанные — записи KIND_DELIVERY с id,
 ## активная — journal.active_delivery («Продолжить» её возвращает). При новой
 ## игре (журнал пустой) доставка с order = 1 выдаётся сразу активной.
+## Если активную из журнала нельзя восстановить (её нет среди годных: файл
+## убран или точки нет на карте), поле в журнале не стирается — в этой сессии
+## активной просто нет, другие доставки можно брать, а поле перезапишется,
+## только когда игрок возьмёт другую. Вернётся точка — «Продолжить» снова
+## подхватит доставку.
 ## Сдача — запись с journal_text через event_sink.add_event (TripStats: время
 ## суток и погода) и сигнал delivery_completed.
 ## Правила — в start(), update_at(pos, speed), interact_at(pos, speed): тесты
@@ -40,10 +45,17 @@ var enabled: bool = false
 ## Что можно сделать в текущей точке (для interact).
 var _here_take: DeliveryDef
 var _here_deliver: bool = false
+## Кеш journal.delivered_ids(), обновляется по journal.entry_added.
+var _done: Dictionary = {}
 
 
 func setup(j: Journal, car: Node3D, spot_list: Array, def_list: Array, sink: Object = null) -> void:
+	if journal != null and journal.entry_added.is_connected(_on_entry_added):
+		journal.entry_added.disconnect(_on_entry_added)
 	journal = j
+	_done = j.delivered_ids() if j != null else {}
+	if j != null:
+		j.entry_added.connect(_on_entry_added)
 	target = car
 	event_sink = sink
 	spots.clear()
@@ -66,17 +78,24 @@ func start() -> void:
 	active = null
 	if journal == null:
 		return
-	var done := journal.delivered_ids()
+	_done = journal.delivered_ids()
+	var stuck := false
 	if journal.active_delivery != "":
 		var def := find(journal.active_delivery)
-		if def != null and not done.has(def.id):
-			active = def
-		else:
+		if _done.has(journal.active_delivery):
+			# Уже сдана — поле устарело, его можно стереть.
 			journal.active_delivery = ""
 			journal.save()
-	if active == null and journal.entries.is_empty():
+		elif def != null:
+			active = def
+		else:
+			# Нет среди годных (убрана или нет точки на карте): поле не трогаем,
+			# в этой сессии активной нет. Первую поверх неё не выдаём.
+			push_warning("Активная доставка %s не найдена или без точки на карте — в этой сессии не активна" % journal.active_delivery)
+			stuck = true
+	if active == null and not stuck and journal.entries.is_empty():
 		for def in defs:
-			if def.order == 1 and not done.has(def.id):
+			if def.order == 1 and not _done.has(def.id):
 				_take(def)
 				break
 	_emit_target()
@@ -90,7 +109,7 @@ func find(id: String) -> DeliveryDef:
 
 
 func is_done(def: DeliveryDef) -> bool:
-	return journal != null and journal.delivered_ids().has(def.id)
+	return journal != null and _done.has(def.id)
 
 
 ## Точки, где сейчас можно что-то взять: {id, title, position, radius,
@@ -99,9 +118,8 @@ func available_spots() -> Array:
 	var out: Array = []
 	if active != null or journal == null:
 		return out
-	var done := journal.delivered_ids()
 	for def in defs:
-		if done.has(def.id):
+		if _done.has(def.id):
 			continue
 		var s: Dictionary = spots[def.from_spot].duplicate()
 		s["delivery_id"] = def.id
@@ -130,9 +148,8 @@ func update_at(pos: Vector3, speed_mps: float) -> void:
 				_here_deliver = true
 				text = "Сдать: " + active.cargo
 		else:
-			var done := journal.delivered_ids()
 			for def in defs:
-				if not done.has(def.id) and _inside(def.from_spot, pos):
+				if not _done.has(def.id) and _inside(def.from_spot, pos):
 					_here_take = def
 					text = "Взять: " + def.cargo
 					break
@@ -175,6 +192,11 @@ func _complete() -> void:
 		journal.add_entry(Journal.KIND_DELIVERY, def.journal_text, 12.0, Journal.WEATHER_CLEAR, def.id)
 	delivery_completed.emit(def)
 	_emit_target()
+
+
+func _on_entry_added(entry: Dictionary) -> void:
+	if entry.get("kind", "") == Journal.KIND_DELIVERY and entry.get("id", "") != "":
+		_done[entry["id"]] = true
 
 
 func _inside(spot_id: String, pos: Vector3) -> bool:

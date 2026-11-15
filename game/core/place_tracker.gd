@@ -2,10 +2,10 @@ class_name PlaceTracker
 extends Node
 ## Открытие мест: раз в CHECK_S сверяет позицию игрока (XZ) с местами из
 ## WorldIndex.places ({id, title, position, radius}). Первое попадание в
-## радиус — journal.open_place(id), запись KIND_PLACE в журнал (через
-## event_sink.add_event, обычно TripStats: время суток и погода) и сигнал
-## place_discovered. Открытые места берутся из журнала и повторно не
-## открываются. Нет данных — ничего не делает.
+## радиус — journal.open_place(id, false), запись KIND_PLACE в журнал (через
+## event_sink.add_event, обычно TripStats: время суток и погода; она же
+## сохраняет журнал, одна запись на диск) и сигнал place_discovered.
+## Открытые места берутся из журнала и повторно не открываются. Нет данных — ничего не делает.
 ## Правила в check(pos): тесты зовут его напрямую, без сцены.
 
 signal place_discovered(id: String, title: String)
@@ -82,7 +82,8 @@ func check(pos: Vector3) -> Array[String]:
 		var c: Vector3 = p["position"]
 		if Vector2(pos.x - c.x, pos.z - c.z).length() > float(p["radius"]):
 			continue
-		journal.open_place(id)
+		# Без сохранения: add_event/add_entry ниже сохранит место и запись разом.
+		journal.open_place(id, false)
 		var title: String = p["title"]
 		if event_sink != null:
 			event_sink.add_event(Journal.KIND_PLACE, title, id)
