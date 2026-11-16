@@ -10,48 +10,48 @@ road_points = Array[PackedVector3Array]([PackedVector3Array(-709.0479, 4.513948,
 road_types = PackedInt32Array(0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1)
 places = Array[Dictionary]([{
 "id": "forest_track",
-"position": Vector3(205.617, 13.851829, -380.326),
+"position": Vector3(205.617, 13.971943, -380.326),
 "radius": 30.0,
 "title": "Лесная грунтовка"
 }, {
 "id": "hill_view",
-"position": Vector3(-315, 26.2884, 505),
+"position": Vector3(-315, 26.661106, 505),
 "radius": 40.0,
 "title": "Холм над озером"
 }, {
 "id": "lake_cape",
-"position": Vector3(-556, -0.63281107, 474),
+"position": Vector3(-556, -0.38402557, 474),
 "radius": 30.0,
 "title": "Мыс"
 }])
 spots = Array[Dictionary]([{
 "id": "east_pier",
-"position": Vector3(-474.987, -2.9960108, 269.281),
+"position": Vector3(-474.987, -2.877496, 269.281),
 "radius": 9.0,
 "title": "Причал на том берегу"
 }, {
 "id": "far_farm",
-"position": Vector3(-347.554, 3.1897295, 877.435),
+"position": Vector3(-347.554, 3.3085113, 877.435),
 "radius": 9.0,
 "title": "Хутор на холмах"
 }, {
 "id": "fishing_camp",
-"position": Vector3(-585.18, -1.4978794, 503.979),
+"position": Vector3(-585.18, -1.3775988, 503.979),
 "radius": 9.0,
 "title": "Рыбацкий лагерь"
 }, {
 "id": "net_shed",
-"position": Vector3(-247.673, 14.219206, 352.082),
+"position": Vector3(-247.673, 14.339196, 352.082),
 "radius": 9.0,
 "title": "Склад сетей"
 }, {
 "id": "shop",
-"position": Vector3(-247.343, 14.46288, 318.608),
+"position": Vector3(-247.343, 14.58278, 318.608),
 "radius": 9.0,
 "title": "Лавка"
 }, {
 "id": "smokehouse",
-"position": Vector3(-191.884, 13.614418, 295.85),
+"position": Vector3(-191.884, 13.73441, 295.85),
 "radius": 9.0,
 "title": "Коптильня"
 }])

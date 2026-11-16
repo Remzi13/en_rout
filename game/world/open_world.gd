@@ -1,7 +1,8 @@
 class_name OpenWorld
 extends Node3D
-## Игровая сессия в открытом мире: окружение и свет, мир из сцен-чанков
-## (подгружаются вокруг игрока, см. ChunkStreamer), машина игрока, камера,
+## Игровая сессия в открытом мире: окружение и свет, рельеф Terrain3D
+## (terrain, см. WorldTerrain) и вода на весь мир, сцены-чанки с дорогами,
+## лесом и постройками (подгружаются вокруг игрока, см. ChunkStreamer), машина игрока, камера,
 ## трафик, погони, сутки и погода, HUD, бортовой журнал (journal), счётчик
 ## поездки (trip_stats), открытие мест (places) и доставки (deliveries). Создаётся из main.gd через
 ## OpenWorld.create(seed); готовность — сигнал ready_to_play (стартовые чанки
@@ -17,6 +18,7 @@ const INITIAL_LOAD_RADIUS_M := 320.0
 
 var world_seed: int = 0
 var materials: WorldMaterials
+var terrain: Terrain3D
 var map: ChunkStreamer
 var roads: RoadNetwork
 var player: ArcadeCar
@@ -62,6 +64,10 @@ func _ready() -> void:
 	# Без видеокарты главный расход — треугольники деревьев: рисуем их ближе.
 	VegetationLayer.distance_scale = 0.5 if is_software_renderer() else 1.0
 	var index := WorldIndex.load_baked()
+	terrain = WorldTerrain.create()
+	terrain.clipmap_target = self # до появления камеры детализация считается от начала мира
+	add_child(terrain)
+	add_child(WorldTerrain.make_water(index.world_rect()))
 	map = ChunkStreamer.create(index)
 	add_child(map)
 	roads = RoadNetwork.from_index(index)
@@ -85,6 +91,7 @@ func _ready() -> void:
 	camera.target = player
 	add_child(camera)
 	camera.current = true
+	terrain.clipmap_target = camera
 	player.impacted.connect(_on_player_impact)
 
 	day_night = DayNight.new()

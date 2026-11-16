@@ -1,16 +1,17 @@
 @tool
 class_name RoadPath
 extends Path3D
-## Участок дороги в чанке. Форма задаётся кривой Path3D и правится прямо в
-## редакторе: полотно и коллизия перестраиваются при изменении кривой.
+## Участок дороги в чанке. Форма задаётся кривой Path3D: по ней строятся
+## дорожная сеть (WorldIndex) и рельеф под дорогой (запекание выравнивает
+## землю и рисует покрытие текстурой рельефа, tools/bake_world.gd).
+## Грунтовка — только рельеф, своего полотна у неё нет. У шоссе поверх рельефа
+## лежит лента асфальта с разметкой вровень с землёй: у текстуры рельефа край
+## шёл бы волной около метра, а у ленты кромка ровная.
 ## Концы участков, которые ближе WorldDefs.JOIN_DISTANCE_M друг к другу,
 ## игра считает одним узлом дорожной сети (так связываются чанки и перекрёстки).
-## Грунтовка у шоссе: кривая доходит до узла на оси шоссе, а полотно обрезано
-## на trim_*_m и лежит чуть ниже асфальта, так что его край уходит под кромку.
+## Правка кривой в редакторе двигает ленту, но не рельеф: он — после запекания.
 
 const SAMPLE_M := 4.0
-const SKIRT_M := 0.8
-const DIRT_LIFT_M := 0.045 ## грунтовка ниже асфальта (ROAD_LIFT_M) и выше площадок
 
 @export var road_type: WorldDefs.RoadType = WorldDefs.RoadType.HIGHWAY:
 	set(v):
@@ -20,16 +21,6 @@ const DIRT_LIFT_M := 0.045 ## грунтовка ниже асфальта (ROAD
 @export var uv_offset_m: float = 0.0:
 	set(v):
 		uv_offset_m = v
-		_queue_rebuild()
-
-## Сколько полотна не строить от начала и конца кривой (примыкание к шоссе).
-@export var trim_start_m: float = 0.0:
-	set(v):
-		trim_start_m = v
-		_queue_rebuild()
-@export var trim_end_m: float = 0.0:
-	set(v):
-		trim_end_m = v
 		_queue_rebuild()
 
 var _mesh_instance: MeshInstance3D
@@ -79,19 +70,18 @@ func _rebuild() -> void:
 	if _body != null:
 		_body.queue_free()
 		_body = null
-	if curve == null or curve.point_count < 2:
+	if not is_highway() or curve == null or curve.point_count < 2:
 		return
-	var length := curve.get_baked_length() - trim_start_m - trim_end_m
+	var length := curve.get_baked_length()
 	if length < 1.0:
 		return
 	var n := maxi(2, ceili(length / SAMPLE_M))
 	var pts := PackedVector3Array()
 	for k in n + 1:
-		pts.append(curve.sample_baked(trim_start_m + length * k / n, true))
+		pts.append(curve.sample_baked(length * k / n, true))
 	var step := length / n
 	var hw := width() * 0.5
-	var lift := Vector3(0.0, WorldDefs.ROAD_LIFT_M if is_highway() else DIRT_LIFT_M, 0.0)
-	var skirt := Vector3(0.0, -SKIRT_M, 0.0)
+	var lift := Vector3(0.0, WorldDefs.ROAD_LIFT_M, 0.0)
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -109,32 +99,17 @@ func _rebuild() -> void:
 		var nrm := (l1 - l0).cross(rr0 - l0).normalized()
 		if nrm.y < 0.0:
 			nrm = -nrm
-		var v0 := (uv_offset_m + trim_start_m + k * step) / 10.0
-		var v1 := (uv_offset_m + trim_start_m + (k + 1) * step) / 10.0
+		var v0 := (uv_offset_m + k * step) / 10.0
+		var v1 := (uv_offset_m + (k + 1) * step) / 10.0
 		var base := verts.size()
 		verts.append_array([l0, rr0, l1, rr1])
 		normals.append_array([nrm, nrm, nrm, nrm])
 		uvs.append_array([Vector2(0, v0), Vector2(1, v0), Vector2(0, v1), Vector2(1, v1)])
 		indices.append_array([base, base + 2, base + 1, base + 1, base + 2, base + 3])
 		faces.append_array([l0, l1, rr0, rr0, l1, rr1])
-		# Боковые «юбки» закрывают щель между полотном и рельефом.
-		var sb := verts.size()
-		var ln := -r0.normalized()
-		verts.append_array([l0, l1, l0 + skirt, l1 + skirt])
-		normals.append_array([ln, ln, ln, ln])
-		uvs.append_array([Vector2(0, v0), Vector2(0, v1), Vector2(0, v0), Vector2(0, v1)])
-		indices.append_array([sb, sb + 2, sb + 1, sb + 1, sb + 2, sb + 3])
-		var rb := verts.size()
-		var rn := r0.normalized()
-		verts.append_array([rr0, rr1, rr0 + skirt, rr1 + skirt])
-		normals.append_array([rn, rn, rn, rn])
-		uvs.append_array([Vector2(1, v0), Vector2(1, v1), Vector2(1, v0), Vector2(1, v1)])
-		indices.append_array([rb, rb + 1, rb + 2, rb + 1, rb + 3, rb + 2])
 
-	var mats := WorldMaterials.shared()
-	var surface := WorldDefs.Surface.ASPHALT if is_highway() else WorldDefs.Surface.DIRT
 	var built := WorldMaterials.build_static(verts, normals, uvs, indices, faces,
-		mats.highway if is_highway() else mats.dirt_road, surface)
+		WorldMaterials.shared().highway, WorldDefs.Surface.ASPHALT)
 	_mesh_instance = built[0]
 	_body = built[1]
 	add_child(_mesh_instance)

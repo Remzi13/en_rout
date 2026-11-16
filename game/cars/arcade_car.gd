@@ -201,9 +201,11 @@ func _update_suspension() -> void:
 			continue
 		var surf: int = WorldDefs.Surface.GRASS
 		var col: Object = hit.get("collider")
-		if col != null and col.has_meta("surface"):
-			surf = col.get_meta("surface")
 		var hp: Vector3 = hit["position"]
+		if col is Terrain3D:
+			surf = WorldTerrain.surface_at(col, hp)
+		elif col != null and col.has_meta("surface"):
+			surf = col.get_meta("surface")
 		var dist := origin.distance_to(hp)
 		_wheel_dist[i] = dist
 		var compression := _rest_length - dist

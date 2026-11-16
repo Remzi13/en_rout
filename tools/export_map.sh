@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Карта из Blender -> чанки игры. Запуск из любого места:
+# Карта -> мир игры. Запуск из любого места:
 #   tools/export_map.sh
 #   BLENDER=/путь/к/blender GODOT=/путь/к/godot tools/export_map.sh
-# 1) Blender снимает с art/map/map.blend высоты, маски, дороги, старт, объекты Props,
+# 1) Blender снимает с art/map/map.blend маски леса, дороги, старт, объекты Props,
 #    места Places и точки доставок Spots
 #    (tools/blender/export_map.py -> art/map/export/);
-# 2) Godot режет карту на чанки (tools/bake_world.gd -> game/world/chunks/,
-#    world.tscn, world_index.tres, подложка карты map_base.png). Чанки перезаписываются целиком.
+# 2) Godot берёт высоты из базового рельефа game/world/terrain/base (правится
+#    кистями в terrain_edit.tscn) и запекает мир (tools/bake_world.gd): рельеф с
+#    дорогами game/world/terrain/baked, чанки game/world/chunks/, world.tscn,
+#    world_index.tres, подложка карты map_base.png. Всё перезаписывается целиком.
 # Godot запускается с окном: в headless растительность не сохраняется.
 set -euo pipefail
 cd "$(dirname "$0")/.."

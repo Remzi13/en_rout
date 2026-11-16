@@ -7,7 +7,7 @@
 - `docs/concept.md` — главный документ, остальные ему подчиняются.
 - `docs/vertical-slice.md` — план и статус задач текущего этапа.
 - `docs/roadmap.md` — что отложено и что сделано (с датой).
-- `docs/map-pipeline.md` — карта из Blender в игру: коллекции и свойства пустышек (`Props`, `Places`, `Spots`).
+- `docs/map-pipeline.md` — карта в игру: рельеф Terrain3D (правится в Godot), коллекции и свойства пустышек в Blender (`Props`, `Places`, `Spots`).
 - `docs/visual-style.md`, `docs/scale.md` — стиль и размеры, обязательны для моделей и карты.
 - `docs/qa/bugs/NNN-коротко.md` — баги, номер следующий по порядку.
 
@@ -23,9 +23,10 @@
 
 - Все тесты: `tests/run_all.sh`. Один: `tests/run_all.sh test_world_map`. Логи в `tests/.logs/`.
 - Импорт после новых файлов или `class_name`: `"$GODOT" --headless --path . --import`.
-- Карта из Blender в чанки: `tools/export_map.sh` (пересобирает все чанки, ~13 с, вместе с подложкой карты).
+- Запекание мира: `tools/export_map.sh` (рельеф с дорогами, все чанки и подложка карты, ~30 с, нужен экран). Запускать после правок карты в Blender и рельефа в Godot.
+- Рельеф правится кистями Terrain3D в `game/world/terrain/terrain_edit.tscn` (данные — `game/world/terrain/base`). `game/world/terrain/baked` и `game/world/chunks/` — результат запекания, руками не править.
 - Модели генерируются скриптами Blender в `tools/blender/` (`make_cars.py`, `make_trees.py`) и выгружаются в `.glb`. Новые модели делаются так же, а не руками.
-- Снимок кадра: по образцу `--shot=файл.png` в `game/terrain_test/terrain_test.gd` или `tools/preview_cars.gd`. Снимки класть в scratchpad, не в репозиторий.
+- Снимок кадра: `tools/shot_world.gd` (мир в точке, `--shot=файл.png --at=x,z,угол`) или по образцу `tools/preview_cars.gd`. Снимки класть в scratchpad, не в репозиторий.
 
 ## Код
 

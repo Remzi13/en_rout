@@ -1,6 +1,6 @@
 extends RefCounted
 ## Подложка карты-схемы: картинка res://game/world/map_base.png, её пишет
-## запекание (tools/bake_world.gd) по сетке рельефа после продавливания дорог
+## запекание (tools/bake_world.gd) по сетке высот рельефа игры (с дорогами)
 ## и маскам forest / conifer. Формат — «Договор задачи 6» в
 ## docs/vertical-slice.md, описание — docs/map-pipeline.md, тест — test_map_base.
 ##

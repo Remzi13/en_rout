@@ -1,11 +1,11 @@
 class_name WorldDefs
 extends RefCounted
-## Общие константы мира из чанков-сцен: размеры, типы дорог и поверхностей.
+## Общие константы мира (рельеф Terrain3D и сцены-чанки): размеры, типы дорог и поверхностей.
 
 const CHUNK_SIZE := 256.0
 const WATER_LEVEL := -4.0
 const LAYER_WORLD := 1
-const ROAD_LIFT_M := 0.06 ## полотно над осью кривой дороги
+const ROAD_LIFT_M := 0.03 ## лента шоссе над осью кривой дороги (рельеф под ней выровнен)
 const JUNCTION_RADIUS_M := 11.0
 const JOIN_DISTANCE_M := 2.0 ## концы дорог ближе этого считаются одним узлом
 

@@ -6,6 +6,8 @@
 #                  объекты из коллекции Props, места (Places) и точки
 #                  доставок (Spots) — см. docs/map-pipeline.md;
 #   heights.f32  — высоты рельефа на сетке 4 м (float32, строки по Z, little-endian);
+#                  игра их не читает (рельеф — Terrain3D, правится в Godot), нужны только
+#                  для разового переноса tools/import_terrain.gd;
 #   forest.u8, conifer.u8, rocks.u8 — маски из групп вершин Terrain (0..255).
 # Что читается из карты — см. tools/blender/make_map.py (Terrain, Roads,
 # PlayerStart) и docs/map-pipeline.md (Props, Places, Spots). Мир — целые чанки по 256 м, покрытые рельефом Terrain.

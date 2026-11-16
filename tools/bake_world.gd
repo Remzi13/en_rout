@@ -1,24 +1,30 @@
 extends SceneTree
-## Запекает карту из Blender (art/map/map.blend) в сцены-чанки для игры.
-## Вся цепочка одной командой — tools/export_map.sh:
+## Запекает карту в мир для игры: рельеф Terrain3D и сцены-чанки.
+## Источники: базовый рельеф game/world/terrain/base (правится кистями в
+## Godot, см. WorldTerrain) и карта из Blender art/map/map.blend (дороги,
+## маски леса, постройки, места). Вся цепочка одной командой — tools/export_map.sh:
 ##   1. blender --background art/map/map.blend --python tools/blender/export_map.py
-##      -> art/map/export/ (высоты, маски, дороги, старт);
+##      -> art/map/export/ (маски, дороги, старт, объекты);
 ##   2. godot --path . -s res://tools/bake_world.gd   (этот скрипт)
-##      -> game/world/chunks/chunk_X_Z.tscn + рельеф (*.res),
-##         game/world/world.tscn (все чанки вместе, для обзора),
+##      -> game/world/terrain/baked (рельеф с дорогами),
+##         game/world/chunks/chunk_X_Z.tscn (дороги, лес, постройки),
+##         game/world/world.tscn (всё вместе, для обзора),
 ##         game/world/world_index.tres (что грузит игра, см. WorldIndex),
 ##         game/world/map_base.png (подложка карты-схемы, tools/map_base.gd).
 ##
 ## Что делает: собирает из линий дорог сеть (концы ближе NODE_MERGE_M — один
 ## узел, конец у середины другой дороги — Т-перекрёсток), кладёт дороги на
-## рельеф (сглаженный профиль, ограничение уклона), продавливает под ними
-## землю, красит рельеф, расставляет растительность по маскам из Blender,
+## рельеф (сглаженный профиль, ограничение уклона), выравнивает под ними
+## землю и рисует покрытие текстурой рельефа (грунтовка — только рельеф, у
+## шоссе поверх лежит лента асфальта RoadPath), расставляет растительность по
+## маскам из Blender,
 ## ставит объекты из коллекции Props (tools/map_props.gd, docs/map-pipeline.md)
-## и режет всё на чанки по 256 м. Вокруг объектов и точек доставок
+## и режет дороги, лес и объекты на чанки по 256 м. Вокруг объектов и точек доставок
 ## растительность не ставится — прогалины, tools/map_clearings.gd. Места и точки доставок (Places, Spots,
 ## tools/map_places.gd) идут только в world_index.tres, высота — по рельефу.
 ##
-## Чанки ПЕРЕЗАПИСЫВАЮТСЯ целиком: карта правится в Blender, а не в сценах.
+## Чанки и запечённый рельеф ПЕРЕЗАПИСЫВАЮТСЯ целиком: правятся базовый
+## рельеф и карта в Blender, а не они.
 ## Запускать без --headless: в headless MultiMesh не отдаёт данные и
 ## растительность сохранится пустой.
 
@@ -27,6 +33,7 @@ const MapProps := preload("res://tools/map_props.gd")
 const MapPlaces := preload("res://tools/map_places.gd")
 const MapClearings := preload("res://tools/map_clearings.gd")
 const MapBase := preload("res://tools/map_base.gd")
+const TerrainAssets := preload("res://tools/terrain_assets.gd")
 const EXPORT_DIR := "res://art/map/export/"
 const ASSETS := "res://game/world/assets/"
 const CHUNKS := "res://game/world/chunks/"
@@ -34,22 +41,24 @@ const WORLD_SCENE := "res://game/world/world.tscn"
 
 const CS := WorldDefs.CHUNK_SIZE
 const GRID_STEP := 4.0
-const GRID_N := 64 ## клеток рельефа на сторону чанка
+const GRID_N := 64 ## клеток сетки масок на сторону чанка
 const WATER_LEVEL := WorldDefs.WATER_LEVEL
 const ROAD_MIN_Y := WATER_LEVEL + 0.8 ## ниже дорога не опускается: у причала полотно у самой воды
 const ROAD_SAMPLE_M := 4.0
 const NODE_MERGE_M := 8.0
 const ROAD_MAX_GRADE := 0.14
-const ROAD_SHOULDER_M := 5.0 ## ровная обочина за краем полотна
-const ROAD_BLEND_M := 18.0
-const ROAD_SINK_M := 0.12 ## рельеф под дорогой ниже полотна: ступенька у края ниже
-## креплений колёс (~0.3 м), иначе машина, заехав сбоку, проскальзывает под полотно
+const ROAD_SHOULDER_M := 1.5 ## ровная обочина за краем покрытия
+const ROAD_BLEND_M := 14.0 ## дальше рельеф плавно возвращается к своей высоте
+const DECK_SINK_M := 0.1 ## рельеф под лентой шоссе ниже неё, чтобы не просвечивал
+const DECK_SINK_INSET_M := 1.0 ## у кромки рельеф вровень с лентой
+const HIGHWAY_WEIGHT := 30.0 ## на стыке высоту задаёт шоссе, грунтовка подстраивается
+const CAP_WEIGHT := 0.02 ## вес торца куска дороги: за концом высоту задаёт дорога, идущая дальше
+const SAND_BELOW_M := WATER_LEVEL + 1.2 ## ниже — песок вместо поля
+const AUTO_SLOPE := 2.5 ## auto_slope материала рельефа (tools/terrain_assets.gd)
+const FOREST_TINT := Color(0.53, 0.66, 0.62) ## земля под лесом темнее поля (множитель цвета)
 const SMOOTH_RADIUS := 10
 const SMOOTH_PASSES := 3
-const PAD_LIFT_M := 0.03
-const HIGHWAY_HALF_M := 6.0 ## половина WorldDefs.ROAD_WIDTHS шоссе
-const DIRT_TRIM_M := HIGHWAY_HALF_M - 1.0 ## грунтовка заходит под кромку асфальта на метр
-const PAD_RADIUS_M := 10.0
+const PAD_LIFT_M := 0.05 ## площадка развязки шоссе — над лентами (WorldDefs.ROAD_LIFT_M)
 const VEG_STEP := 7.0
 const VEG_SEED := 42
 const CONTROL_EVERY := 5 ## каждая 5-я точка оси (~20 м) — точка кривой RoadPath
@@ -61,7 +70,10 @@ var _gw: int = 0 ## точек сетки по X
 var _gh: int = 0 ## точек сетки по Z
 var _x0: float = 0.0
 var _z0: float = 0.0
-var _hgt := PackedFloat32Array()
+var _w: int = 0 ## точек рельефа Terrain3D по X (1 на метр)
+var _h: int = 0 ## точек рельефа Terrain3D по Z
+var _hm := PackedFloat32Array() ## высоты рельефа, 1 точка на метр; после _stamp_roads — с дорогами
+var _hgt := PackedFloat32Array() ## те же высоты на сетке масок (GRID_STEP): профили дорог, подложка карты
 var _forest := PackedFloat32Array()
 var _conifer := PackedFloat32Array()
 var _rocks := PackedFloat32Array()
@@ -89,14 +101,19 @@ func _run() -> void:
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ASSETS))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(CHUNKS))
+	if not TerrainAssets.ensure():
+		quit(1)
+		return
 	_bake_assets()
 	_build_roads(data["roads"])
 	var pieces := _split_roads()
-	_stamp_roads(pieces)
+	var road_tex := _stamp_roads(pieces)
+	_hgt = _grid_from_hm()
+	_bake_terrain(road_tex)
 	_place_start(data.get("start"))
 	var props := _group_props(data.get("props", []))
-	# Высота мест и точек — по рельефу после продавливания под дорогами.
-	var ground := func(x: float, z: float) -> float: return _sample(_hgt, x, z)
+	# Высота мест и точек — по рельефу после выравнивания под дорогами.
+	var ground := _ground
 	var rect := Rect2(_x0, _z0, _chunks_n.x * CS, _chunks_n.y * CS)
 	_places = MapPlaces.parse(data.get("places", []), "Places", MapPlaces.PLACE_RADIUS_M, ground, rect)
 	_spots = MapPlaces.parse(data.get("spots", []), "Spots", MapPlaces.SPOT_RADIUS_M, ground, rect)
@@ -141,14 +158,51 @@ func _load_export() -> Dictionary:
 	if int(data["grid"][0]) != _gw or int(data["grid"][1]) != _gh:
 		push_error("Размер сетки в экспорте не совпадает с числом чанков")
 		return {}
-	_hgt = FileAccess.get_file_as_bytes(EXPORT_DIR + "heights.f32").to_float32_array()
 	_forest = _load_mask("forest")
 	_conifer = _load_mask("conifer")
 	_rocks = _load_mask("rocks")
-	if _hgt.size() != _gw * _gh or _forest.size() != _gw * _gh:
-		push_error("Размер файлов высот или масок не совпадает с сеткой")
+	if _forest.size() != _gw * _gh:
+		push_error("Размер масок не совпадает с сеткой")
 		return {}
+	# Высоты — из базового рельефа Terrain3D (правится в Godot), а не из Blender.
+	if DirAccess.get_files_at(WorldTerrain.BASE_DIR).is_empty():
+		push_error("Нет базового рельефа %s — сначала tools/import_terrain.gd" % WorldTerrain.BASE_DIR)
+		return {}
+	_w = _chunks_n.x * int(CS)
+	_h = _chunks_n.y * int(CS)
+	_hm = WorldTerrain.read_map(WorldTerrain.BASE_DIR, Terrain3DRegion.TYPE_HEIGHT,
+		Rect2i(int(_x0), int(_z0), _w, _h)).get_data().to_float32_array()
+	for i in _hm.size():
+		if is_nan(_hm[i]):
+			_hm[i] = 0.0
+	_hgt = _grid_from_hm()
 	return data
+
+
+## Высоты рельефа на сетке масок: узел сетки — точка рельефа под ним (крайний
+## ряд сетки лежит за последней точкой рельефа и берёт её высоту).
+func _grid_from_hm() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_gw * _gh)
+	var step := int(GRID_STEP)
+	for gz in _gh:
+		var pz := mini(gz * step, _h - 1)
+		for gx in _gw:
+			out[gz * _gw + gx] = _hm[pz * _w + mini(gx * step, _w - 1)]
+	return out
+
+
+## Высота рельефа в мировой точке (билинейно по точкам Terrain3D, за краем — край).
+func _ground(x: float, z: float) -> float:
+	var fx := clampf(x - _x0, 0.0, _w - 1.0)
+	var fz := clampf(z - _z0, 0.0, _h - 1.0)
+	var ix := mini(floori(fx), _w - 2)
+	var iz := mini(floori(fz), _h - 2)
+	var tx := fx - ix
+	var tz := fz - iz
+	var a := lerpf(_hm[iz * _w + ix], _hm[iz * _w + ix + 1], tx)
+	var b := lerpf(_hm[(iz + 1) * _w + ix], _hm[(iz + 1) * _w + ix + 1], tx)
+	return lerpf(a, b, tz)
 
 
 func _load_mask(mask_name: String) -> PackedFloat32Array:
@@ -171,10 +225,6 @@ func _sample(arr: PackedFloat32Array, x: float, z: float) -> float:
 	var a := lerpf(arr[iz * _gw + ix], arr[iz * _gw + ix + 1], tx)
 	var b := lerpf(arr[(iz + 1) * _gw + ix], arr[(iz + 1) * _gw + ix + 1], tx)
 	return lerpf(a, b, tz)
-
-
-func _at(arr: PackedFloat32Array, gx: int, gz: int) -> float:
-	return arr[clampi(gz, 0, _gh - 1) * _gw + clampi(gx, 0, _gw - 1)]
 
 
 static func _hash4(a: int, b: int, c: int, d: int) -> int:
@@ -200,12 +250,10 @@ func _save(res: Resource, file: String) -> Resource:
 
 func _bake_assets() -> void:
 	var mb := MaterialBuilder.new()
-	_assets["terrain"] = _save(mb.terrain, "terrain.res")
 	_assets["highway"] = _save(mb.highway, "highway.res")
 	_assets["asphalt_plain"] = _save(mb.asphalt_plain, "asphalt_plain.res")
 	_assets["dirt_road"] = _save(mb.dirt_road, "dirt_road.res")
 	_assets["water"] = _save(mb.water, "water.tres")
-	_assets["water_plane"] = _save(mb.water_mesh, "water_plane.tres")
 	_assets["rock"] = _save(mb.rock_mesh, "rock.tres")
 	_assets["bush"] = _save(mb.bush_mesh, "bush.tres")
 
@@ -303,11 +351,7 @@ func _build_roads(src: Array) -> void:
 		var pts3 := PackedVector3Array()
 		for k in flat.size():
 			pts3.append(Vector3(flat[k].x, h[k], flat[k].y))
-		# Грунтовка у шоссе: полотно обрезается у кромки асфальта.
-		var dirt: bool = ln["type"] == WorldDefs.RoadType.DIRT
-		_roads.append({"points": pts3, "type": ln["type"],
-			"trim_a": DIRT_TRIM_M if dirt and _nodes[ln["a"]]["highway"] else 0.0,
-			"trim_b": DIRT_TRIM_M if dirt and _nodes[ln["b"]]["highway"] else 0.0})
+		_roads.append({"points": pts3, "type": ln["type"]})
 
 
 func _node_for(nodes: PackedVector2Array, p: Vector2) -> int:
@@ -421,80 +465,165 @@ static func _smooth(src: PackedFloat32Array, radius: int) -> PackedFloat32Array:
 	return out
 
 
-## Продавливает рельеф под дорогами и площадками перекрёстков, заполняет _edge_dist.
+## Вдавливает дороги в рельеф _hm (1 точка на метр) и заполняет _edge_dist.
+## Возвращает покрытие по точкам рельефа: 0 — нет, иначе номер текстуры
+## (на грунтовке — грунт, под лентой шоссе — асфальт, у его кромки и на
+## обочине — грунт).
+## Высота у дороги — среднее по всем дорогам рядом с весом, быстро падающим
+## от края полотна (у шоссе вес больше): на самом полотне это его профиль,
+## а на стыке грунтовка плавно подходит к асфальту, без ступеньки.
 ## Дороги берутся по готовым кривым кусков и с той же выборкой, что у RoadPath:
-## земля ложится ровно под полотно, без расхождений на перегибах профиля.
-func _stamp_roads(pieces: Dictionary) -> void:
-	var count := _gw * _gh
-	var infl := PackedFloat32Array()
-	infl.resize(count)
-	var road_y := PackedFloat32Array()
-	road_y.resize(count)
-	# Высоту вершина берёт от ближайшей дороги (по расстоянию до края полотна),
-	# а силу продавливания — наибольшую. Иначе в широкой ровной полосе вершину
-	# захватывает первый попавшийся отрезок, и на уклоне земля встаёт выше полотна.
-	var nearest := PackedFloat32Array()
-	nearest.resize(count)
-	nearest.fill(1e6)
-	var lines: Array = []
+## земля ложится ровно под ленту шоссе, без расхождений на перегибах профиля.
+func _stamp_roads(pieces: Dictionary) -> PackedByteArray:
+	var count := _w * _h
+	var edge := PackedFloat32Array() # расстояние до края ближайшего полотна
+	edge.resize(count)
+	edge.fill(INF)
+	var sum_w := PackedFloat32Array()
+	sum_w.resize(count)
+	var sum_wy := PackedFloat32Array()
+	sum_wy.resize(count)
+	var road_tex := PackedByteArray()
+	road_tex.resize(count)
+	var under_deck := PackedByteArray() # точка под лентой шоссе, не у кромки
+	under_deck.resize(count)
+	var deck_y := PackedFloat32Array() # под лентой шоссе высота строго её, без смешения
+	deck_y.resize(count)
+	deck_y.fill(INF)
+	# Ближайшая точка текущего куска дороги для каждой задетой точки рельефа.
+	var cur_e := PackedFloat32Array()
+	cur_e.resize(count)
+	cur_e.fill(INF)
+	var cur_y := PackedFloat32Array()
+	cur_y.resize(count)
+	# Точка лежит за торцом куска (а не сбоку от него). Куски стыкуются на
+	# границах чанков и в узлах: там высоту задаёт кусок, мимо которого точка
+	# лежит сбоку, иначе на уклоне торец соседа тянул бы землю к своей высоте.
+	var cur_cap := PackedByteArray()
+	cur_cap.resize(count)
 	for list: Array in pieces.values():
 		for piece: Dictionary in list:
-			lines.append(piece)
-	for r: Dictionary in lines:
-		var pts := _deck_points(r["curve"], r["origin"])
-		var hw: float = WorldDefs.ROAD_WIDTHS[r["type"]] * 0.5
-		var core := hw + ROAD_SHOULDER_M
-		var reach := core + ROAD_BLEND_M
-		for k in pts.size() - 1:
-			var p0 := pts[k]
-			var p1 := pts[k + 1]
-			var ix0 := maxi(floori((minf(p0.x, p1.x) - reach - _x0) / GRID_STEP), 0)
-			var ix1 := mini(ceili((maxf(p0.x, p1.x) + reach - _x0) / GRID_STEP), _gw - 1)
-			var iz0 := maxi(floori((minf(p0.z, p1.z) - reach - _z0) / GRID_STEP), 0)
-			var iz1 := mini(ceili((maxf(p0.z, p1.z) + reach - _z0) / GRID_STEP), _gh - 1)
-			var sx := p1.x - p0.x
-			var sz := p1.z - p0.z
-			var l2 := maxf(sx * sx + sz * sz, 0.0001)
-			for gz in range(iz0, iz1 + 1):
-				var pz := _z0 + gz * GRID_STEP
-				for gx in range(ix0, ix1 + 1):
-					var px := _x0 + gx * GRID_STEP
-					var t := clampf(((px - p0.x) * sx + (pz - p0.z) * sz) / l2, 0.0, 1.0)
-					var dx := px - (p0.x + sx * t)
-					var dz := pz - (p0.z + sz * t)
-					var d := sqrt(dx * dx + dz * dz)
-					if d >= reach:
-						continue
-					var idx := gz * _gw + gx
-					infl[idx] = maxf(infl[idx], 1.0 - smoothstep(core, reach, d))
-					if d - hw < nearest[idx]:
-						nearest[idx] = d - hw
-						road_y[idx] = lerpf(p0.y, p1.y, t) - ROAD_SINK_M
+			var pts := _deck_points(piece["curve"], piece["origin"])
+			var highway: bool = piece["type"] == WorldDefs.RoadType.HIGHWAY
+			var hw: float = WorldDefs.ROAD_WIDTHS[piece["type"]] * 0.5
+			var reach := hw + ROAD_SHOULDER_M + ROAD_BLEND_M
+			var touched := PackedInt32Array()
+			for k in pts.size() - 1:
+				var a := pts[k]
+				var b := pts[k + 1]
+				var ax := a.x - _x0
+				var az := a.z - _z0
+				var sx := b.x - a.x
+				var sz := b.z - a.z
+				var len2 := maxf(sx * sx + sz * sz, 0.0001)
+				var px0 := maxi(floori(minf(ax, ax + sx) - reach), 0)
+				var px1 := mini(ceili(maxf(ax, ax + sx) + reach), _w - 1)
+				var pz0 := maxi(floori(minf(az, az + sz) - reach), 0)
+				var pz1 := mini(ceili(maxf(az, az + sz) + reach), _h - 1)
+				for pz in range(pz0, pz1 + 1):
+					for px in range(px0, px1 + 1):
+						var t_raw := ((px - ax) * sx + (pz - az) * sz) / len2
+						var t := clampf(t_raw, 0.0, 1.0)
+						var dx := px - (ax + sx * t)
+						var dz := pz - (az + sz * t)
+						var e := sqrt(dx * dx + dz * dz) - hw
+						var i := pz * _w + px
+						if e < cur_e[i] and e < ROAD_SHOULDER_M + ROAD_BLEND_M:
+							if cur_e[i] == INF:
+								touched.append(i)
+							cur_e[i] = e
+							cur_y[i] = lerpf(a.y, b.y, t)
+							cur_cap[i] = 1 if (k == 0 and t_raw < 0.0) or (k == pts.size() - 2 and t_raw > 1.0) else 0
+			for i in touched:
+				var e := cur_e[i]
+				var cap := cur_cap[i] == 1
+				var wt := (HIGHWAY_WEIGHT if highway else 1.0) / pow(maxf(e, 0.0) + 0.3, 3.0)
+				if cap:
+					wt *= CAP_WEIGHT
+				sum_w[i] += wt
+				sum_wy[i] += wt * cur_y[i]
+				edge[i] = minf(edge[i], e)
+				if highway:
+					if e <= 0.5 and (not cap or deck_y[i] == INF):
+						deck_y[i] = cur_y[i]
+					# Асфальт рельефа — только под лентой (если она вдали мерцает, под
+					# ней тот же цвет), у кромки и на обочине — грунт.
+					if e <= -DECK_SINK_INSET_M:
+						road_tex[i] = WorldTerrain.TEX_ASPHALT
+						under_deck[i] = 1
+					elif e <= ROAD_SHOULDER_M and road_tex[i] == 0:
+						road_tex[i] = WorldTerrain.TEX_DIRT
+				elif e <= 0.0 and road_tex[i] != WorldTerrain.TEX_ASPHALT:
+					road_tex[i] = WorldTerrain.TEX_DIRT
+				cur_e[i] = INF
 
-	for nd: Dictionary in _nodes:
-		if nd["degree"] < 3:
-			continue
-		var np: Vector3 = nd["pos"]
-		var reach := PAD_RADIUS_M + ROAD_SHOULDER_M + ROAD_BLEND_M
-		var ix0 := maxi(floori((np.x - reach - _x0) / GRID_STEP), 0)
-		var ix1 := mini(ceili((np.x + reach - _x0) / GRID_STEP), _gw - 1)
-		var iz0 := maxi(floori((np.z - reach - _z0) / GRID_STEP), 0)
-		var iz1 := mini(ceili((np.z + reach - _z0) / GRID_STEP), _gh - 1)
-		for gz in range(iz0, iz1 + 1):
-			for gx in range(ix0, ix1 + 1):
-				var d := Vector2(_x0 + gx * GRID_STEP, _z0 + gz * GRID_STEP).distance_to(Vector2(np.x, np.z)) - PAD_RADIUS_M
-				if d >= ROAD_SHOULDER_M + ROAD_BLEND_M:
-					continue
-				var idx := gz * _gw + gx
-				infl[idx] = maxf(infl[idx], 1.0 - smoothstep(ROAD_SHOULDER_M, ROAD_SHOULDER_M + ROAD_BLEND_M, d))
-				if d < nearest[idx]:
-					nearest[idx] = d
-					road_y[idx] = np.y - ROAD_SINK_M
-
-	_edge_dist = nearest
 	for i in count:
-		if infl[i] > 0.0:
-			_hgt[i] = lerpf(_hgt[i], road_y[i], infl[i])
+		if sum_w[i] <= 0.0:
+			continue
+		var y := deck_y[i] if deck_y[i] != INF else sum_wy[i] / sum_w[i]
+		_hm[i] = lerpf(y, _hm[i], smoothstep(ROAD_SHOULDER_M, ROAD_SHOULDER_M + ROAD_BLEND_M, edge[i]))
+		if under_deck[i] == 1:
+			_hm[i] -= DECK_SINK_M
+
+	# Расстояние до дороги на сетке масок — для растительности.
+	_edge_dist.resize(_gw * _gh)
+	var step := int(GRID_STEP)
+	for gz in _gh:
+		var pz := mini(gz * step, _h - 1)
+		for gx in _gw:
+			_edge_dist[gz * _gw + gx] = minf(edge[pz * _w + mini(gx * step, _w - 1)], 1e6)
+	return road_tex
+
+
+## Пишет рельеф для игры (WorldTerrain.BAKED_DIR): высоты с дорогами, покрытие
+## и цвет. Покрытие и цвет, нарисованные кистью в базовом рельефе, сохраняются;
+## поверх — дороги, песок у воды (где покрытие не задано рукой) и тёмная
+## земля под лесом.
+func _bake_terrain(road_tex: PackedByteArray) -> void:
+	var rect := Rect2i(int(_x0), int(_z0), _w, _h)
+	var ctrl := WorldTerrain.read_map(WorldTerrain.BASE_DIR, Terrain3DRegion.TYPE_CONTROL, rect) \
+		.get_data().to_float32_array()
+	var color_img := WorldTerrain.read_map(WorldTerrain.BASE_DIR, Terrain3DRegion.TYPE_COLOR, rect)
+	var color := color_img.get_data()
+	var auto_px := Terrain3DUtil.as_float(Terrain3DUtil.enc_auto(true))
+	var tex_px := PackedFloat32Array()
+	for id in 32:
+		tex_px.append(Terrain3DUtil.as_float(Terrain3DUtil.enc_base(id)))
+	for pz in _h:
+		for px in _w:
+			var i := pz * _w + px
+			if road_tex[i] != 0:
+				ctrl[i] = tex_px[road_tex[i]]
+			elif ctrl[i] == auto_px and _hm[i] < SAND_BELOW_M:
+				ctrl[i] = tex_px[WorldTerrain.TEX_SAND]
+			# Под лесом темнее только поле: дороги, песок и скала на склонах
+			# остаются своего цвета (доля поля — как в автошейдере материала).
+			var fw := _sample(_forest, _x0 + px, _z0 + pz) if ctrl[i] == auto_px else 0.0
+			if fw > 0.01:
+				var dx := (_hm[pz * _w + mini(px + 1, _w - 1)] - _hm[pz * _w + maxi(px - 1, 0)]) * 0.5
+				var dz := (_hm[mini(pz + 1, _h - 1) * _w + px] - _hm[maxi(pz - 1, 0) * _w + px]) * 0.5
+				fw *= clampf(1.0 - 2.0 * AUTO_SLOPE * (1.0 - 1.0 / sqrt(1.0 + dx * dx + dz * dz)), 0.0, 1.0)
+				var c := i * 4
+				color[c] = int(color[c] * lerpf(1.0, FOREST_TINT.r, fw))
+				color[c + 1] = int(color[c + 1] * lerpf(1.0, FOREST_TINT.g, fw))
+				color[c + 2] = int(color[c + 2] * lerpf(1.0, FOREST_TINT.b, fw))
+
+	var dir_abs := ProjectSettings.globalize_path(WorldTerrain.BAKED_DIR)
+	DirAccess.make_dir_recursive_absolute(dir_abs)
+	for f in DirAccess.get_files_at(WorldTerrain.BAKED_DIR):
+		DirAccess.remove_absolute(dir_abs.path_join(f))
+	var terrain := WorldTerrain.create(WorldTerrain.BAKED_DIR)
+	terrain.collision_mode = Terrain3DCollision.DISABLED
+	terrain.save_16_bit = true # высоты с точностью ~2 мм, файлы втрое меньше
+	get_root().add_child(terrain)
+	terrain.data.import_images([
+		Image.create_from_data(_w, _h, false, Image.FORMAT_RF, _hm.to_byte_array()),
+		Image.create_from_data(_w, _h, false, Image.FORMAT_RF, ctrl.to_byte_array()),
+		Image.create_from_data(_w, _h, false, Image.FORMAT_RGBA8, color),
+	], Vector3(_x0, 0.0, _z0), 0.0, 1.0)
+	terrain.data.save_directory(WorldTerrain.BAKED_DIR)
+	print("рельеф: %d×%d м, регионов %d -> %s" % [_w, _h, terrain.data.get_region_count(), WorldTerrain.BAKED_DIR])
+	terrain.free()
 
 
 ## Старт: ближайшая к PlayerStart точка дороги, правая полоса, по ходу пустышки.
@@ -559,8 +688,6 @@ func _split_roads() -> Dictionary:
 					"origin": origin,
 					"type": r["type"],
 					"uv": dists[start],
-					"trim_start": r["trim_a"] if start == 0 else 0.0,
-					"trim_end": r["trim_b"] if last else 0.0,
 				})
 				start = k
 	return out
@@ -664,48 +791,6 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 	root.name = "Chunk_%d_%d" % [cc.x, cc.y]
 	root.coord = cc
 
-	# Рельеф: меш и форма — отдельными файлами рядом со сценой.
-	var t := _terrain_arrays(cc)
-	var a := []
-	a.resize(Mesh.ARRAY_MAX)
-	a[Mesh.ARRAY_VERTEX] = t["vertices"]
-	a[Mesh.ARRAY_NORMAL] = t["normals"]
-	a[Mesh.ARRAY_COLOR] = t["colors"]
-	a[Mesh.ARRAY_INDEX] = t["indices"]
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
-	mesh.surface_set_material(0, _assets["terrain"])
-	ResourceSaver.save(mesh, CHUNKS + base + "_terrain.res", ResourceSaver.FLAG_CHANGE_PATH | ResourceSaver.FLAG_COMPRESS)
-	mesh.take_over_path(CHUNKS + base + "_terrain.res")
-	var shape := ConcavePolygonShape3D.new()
-	shape.set_faces(t["faces"])
-	shape.backface_collision = true
-	ResourceSaver.save(shape, CHUNKS + base + "_terrain_shape.res", ResourceSaver.FLAG_CHANGE_PATH | ResourceSaver.FLAG_COMPRESS)
-	shape.take_over_path(CHUNKS + base + "_terrain_shape.res")
-
-	var terrain := MeshInstance3D.new()
-	terrain.name = "Terrain"
-	terrain.mesh = mesh
-	root.add_child(terrain)
-	var body := StaticBody3D.new()
-	body.name = "TerrainBody"
-	body.collision_layer = WorldDefs.LAYER_WORLD
-	body.collision_mask = 0
-	body.set_meta("surface", WorldDefs.Surface.GRASS)
-	var cshape := CollisionShape3D.new()
-	cshape.name = "Shape"
-	cshape.shape = shape
-	body.add_child(cshape)
-	root.add_child(body)
-
-	if t["water"]:
-		var water := MeshInstance3D.new()
-		water.name = "Water"
-		water.mesh = _assets["water_plane"]
-		water.position.y = WATER_LEVEL
-		water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		root.add_child(water)
-
 	var roads := Node3D.new()
 	roads.name = "Roads"
 	root.add_child(roads)
@@ -716,8 +801,6 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 		n += 1
 		rp.road_type = piece["type"]
 		rp.uv_offset_m = piece["uv"]
-		rp.trim_start_m = piece["trim_start"]
-		rp.trim_end_m = piece["trim_end"]
 		rp.curve = piece["curve"]
 		roads.add_child(rp)
 
@@ -728,15 +811,13 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 	var rect := Rect2(origin.x, origin.z, CS, CS)
 	for nd: Dictionary in _nodes:
 		var np: Vector3 = nd["pos"]
-		if nd["degree"] < 3 or not rect.has_point(Vector2(np.x, np.z)):
+		# Площадка нужна только на развязке шоссе: закрывает наложение лент.
+		# Остальные перекрёстки — рельеф.
+		if nd["highways"] < 3 or not rect.has_point(Vector2(np.x, np.z)):
 			continue
 		var j := RoadJunction.new()
 		j.name = "Junction%d" % n
 		n += 1
-		j.highway = nd["highway"]
-		# Шоссе идёт насквозь, остальное — грунтовки: круг прячется под асфальтом.
-		if nd["highways"] == 2:
-			j.radius_m = HIGHWAY_HALF_M
 		j.position = np - origin + Vector3(0.0, PAD_LIFT_M, 0.0)
 		junctions.add_child(j)
 
@@ -755,9 +836,8 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 	var props := Node3D.new()
 	props.name = "Props"
 	root.add_child(props)
-	var ground := func(x: float, z: float) -> float: return _sample(_hgt, x, z)
 	for prop: Dictionary in _props.get(cc, []):
-		props.add_child(MapProps.build(prop, origin, ground))
+		props.add_child(MapProps.build(prop, origin, _ground))
 
 	_set_owner(root, root)
 	var packed := PackedScene.new()
@@ -767,64 +847,7 @@ func _bake_chunk(cc: Vector2i, pieces: Array) -> void:
 	root.free()
 
 
-## Сетка рельефа чанка из общей сетки: края соседей совпадают по построению.
-func _terrain_arrays(cc: Vector2i) -> Dictionary:
-	var n := GRID_N + 1
-	var gx0 := (cc.x - _chunk_min.x) * GRID_N
-	var gz0 := (cc.y - _chunk_min.y) * GRID_N
-	var verts := PackedVector3Array()
-	var normals := PackedVector3Array()
-	var colors := PackedColorArray()
-	verts.resize(n * n)
-	normals.resize(n * n)
-	colors.resize(n * n)
-	var min_h := INF
-	var c_field := Color(0.45, 0.56, 0.24)
-	var c_forest := Color(0.24, 0.37, 0.15)
-	var c_hills := Color(0.40, 0.44, 0.27)
-	var c_rock := Color(0.45, 0.43, 0.40)
-	var c_sand := Color(0.70, 0.64, 0.48)
-	var c_dirt := Color(0.40, 0.33, 0.24)
-	var c_mud := Color(0.28, 0.25, 0.20)
-	for gz in n:
-		for gx in n:
-			var x := gx0 + gx
-			var z := gz0 + gz
-			var h := _at(_hgt, x, z)
-			min_h = minf(min_h, h)
-			var nrm := Vector3(_at(_hgt, x - 1, z) - _at(_hgt, x + 1, z), 2.0 * GRID_STEP,
-				_at(_hgt, x, z - 1) - _at(_hgt, x, z + 1)).normalized()
-			var vi := gz * n + gx
-			verts[vi] = Vector3(gx * GRID_STEP, h, gz * GRID_STEP)
-			normals[vi] = nrm
-			var col := c_field.lerp(c_forest, _at(_forest, x, z)).lerp(c_hills, _at(_rocks, x, z))
-			col = col.lerp(c_rock, smoothstep(0.18, 0.4, 1.0 - nrm.y))
-			col = col.lerp(c_dirt, 1.0 - smoothstep(0.5, 3.5, _at(_edge_dist, x, z)))
-			col = col.lerp(c_sand, 1.0 - smoothstep(WATER_LEVEL + 0.6, WATER_LEVEL + 1.8, h))
-			col = col.lerp(c_mud, 1.0 - smoothstep(WATER_LEVEL - 3.0, WATER_LEVEL - 0.5, h))
-			var jitter := (_rand01(x, z, 7) - 0.5) * 0.06
-			colors[vi] = Color(col.r + jitter, col.g + jitter, col.b + jitter * 0.5)
-	var indices := PackedInt32Array()
-	var faces := PackedVector3Array()
-	indices.resize(GRID_N * GRID_N * 6)
-	faces.resize(GRID_N * GRID_N * 6)
-	var k := 0
-	for gz in GRID_N:
-		for gx in GRID_N:
-			var i00 := gz * n + gx
-			var i10 := i00 + 1
-			var i01 := i00 + n
-			var i11 := i01 + 1
-			var tri := [i00, i10, i01, i10, i11, i01]
-			for t in 6:
-				indices[k] = tri[t]
-				faces[k] = verts[tri[t]]
-				k += 1
-	return {"vertices": verts, "normals": normals, "colors": colors, "indices": indices,
-		"faces": faces, "water": min_h < WATER_LEVEL + 0.5}
-
-
-## Подложка карты-схемы (tools/map_base.gd) по рельефу после продавливания дорог.
+## Подложка карты-схемы (tools/map_base.gd) по рельефу с дорогами.
 func _bake_map_base(coords: Array[Vector2i]) -> void:
 	var grid := {"hgt": _hgt, "forest": _forest, "conifer": _conifer, "w": _gw, "h": _gh,
 		"x0": _x0, "z0": _z0, "step": GRID_STEP}
@@ -854,15 +877,15 @@ func _vegetation(cc: Vector2i) -> Dictionary:
 			var lz := (j + 0.15 + _rand01(gi, gj, 61) * 0.7) * VEG_STEP
 			var wx := x0 + lx
 			var wz := z0 + lz
-			var h := _sample(_hgt, wx, wz)
+			var h := _ground(wx, wz)
 			if h < WATER_LEVEL + 1.2:
 				continue
 			if _sample(_edge_dist, wx, wz) < 4.0:
 				continue
 			if MapClearings.blocked(clear, wx, wz):
 				continue
-			var slope := absf(_sample(_hgt, wx + 2.0, wz) - _sample(_hgt, wx - 2.0, wz)) / 4.0 \
-				+ absf(_sample(_hgt, wx, wz + 2.0) - _sample(_hgt, wx, wz - 2.0)) / 4.0
+			var slope := absf(_ground(wx + 2.0, wz) - _ground(wx - 2.0, wz)) / 4.0 \
+				+ absf(_ground(wx, wz + 2.0) - _ground(wx, wz - 2.0)) / 4.0
 			var fw := _sample(_forest, wx, wz)
 			var rw := _sample(_rocks, wx, wz)
 			var tree_density := 0.02 + 0.55 * fw
@@ -934,11 +957,15 @@ func _bake_world(coords: Array[Vector2i]) -> void:
 		inst.position = Vector3(cc.x * CS, 0.0, cc.y * CS)
 		root.add_child(inst)
 
+	var rect := WorldDefs.rect_of_chunks(coords)
+	root.add_child(WorldTerrain.create())
+	root.add_child(WorldTerrain.make_water(rect))
+
 	var start := Marker3D.new()
 	start.name = "PlayerStart"
 	start.transform = _start
 	root.add_child(start)
-	root.add_child(ChunkStreamer.make_bounds(WorldDefs.rect_of_chunks(coords)))
+	root.add_child(ChunkStreamer.make_bounds(rect))
 
 	_set_owner(root, root)
 	var packed := PackedScene.new()
@@ -947,6 +974,7 @@ func _bake_world(coords: Array[Vector2i]) -> void:
 	assert(err == OK)
 	# Индекс мира (что грузит игра) считается в глобальных координатах,
 	# поэтому сцену ненадолго ставим в дерево.
+	(root.get_node("Terrain3D") as Terrain3D).clipmap_target = root # камеры здесь нет
 	get_root().add_child(root)
 	WorldIndex.save_from(root, _places, _spots)
 	root.free()

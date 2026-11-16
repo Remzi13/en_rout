@@ -95,8 +95,12 @@ func _run() -> void:
 		"загружено %d, лишних %d" % [world.map.chunks().size(), far_left])
 	world.map.load_radius_m = radius_before
 
-	# Погоня: игрок стоит — его должны зажать.
+	# Погоня: игрок стоит — его должны зажать. Останавливаем машину сами: без
+	# водителя она катится накатом (на асфальте — долго), и тогда исход зависит
+	# от того, где автопилот оказался к этой секунде.
 	p.driver = null
+	p.linear_velocity = Vector3.ZERO
+	p.angular_velocity = Vector3.ZERO
 	world.chase.trigger_now()
 	await _frames(10)
 	H.check("погоня: предупреждение", world.chase.state == ChaseDirectorScript.State.WARNING, str(world.chase.state))

@@ -2,14 +2,15 @@
 class_name WorldMaterials
 extends RefCounted
 ## Общие материалы и меши мира. Лежат файлами в game/world/assets/ (их
-## создаёт tools/bake_world.gd, править можно в редакторе). Загружаются
-## один раз и разделяются всеми чанками; погода меняет их на лету.
+## создаёт tools/bake_world.gd, править можно в редакторе), материал рельефа —
+## в game/world/terrain/ (WorldTerrain). Загружаются один раз и разделяются
+## всеми чанками; погода меняет их на лету.
 
 const DIR := "res://game/world/assets/"
 
 static var _shared: WorldMaterials
 
-var terrain: StandardMaterial3D
+var terrain: Terrain3DMaterial
 var highway: StandardMaterial3D
 var asphalt_plain: StandardMaterial3D
 var dirt_road: StandardMaterial3D
@@ -17,6 +18,7 @@ var water: StandardMaterial3D
 
 var _road_mats: Array[StandardMaterial3D] = []
 var _dry_roughness: Dictionary = {}
+var _dry_macro: Array[Color] = [] ## оттенки пятен рельефа в сухую погоду
 var _shape_cache: Dictionary = {}
 
 
@@ -27,7 +29,7 @@ static func shared() -> WorldMaterials:
 
 
 func _init() -> void:
-	terrain = load(DIR + "terrain.res")
+	terrain = load(WorldTerrain.MATERIAL_PATH)
 	highway = load(DIR + "highway.res")
 	asphalt_plain = load(DIR + "asphalt_plain.res")
 	dirt_road = load(DIR + "dirt_road.res")
@@ -42,7 +44,17 @@ func set_wetness(k: float) -> void:
 	for m in _road_mats:
 		m.roughness = lerpf(_dry_roughness[m], 0.28, k)
 		m.albedo_color = Color.WHITE.lerp(Color(0.62, 0.62, 0.66), k)
-	terrain.albedo_color = Color.WHITE.lerp(Color(0.78, 0.8, 0.78), k)
+	# У рельефа общий множитель цвета — оттенки крупных пятен.
+	# Параметры шейдера доступны, когда материал уже у рельефа в дереве сцены.
+	if _dry_macro.is_empty():
+		var m1: Variant = terrain.get_shader_param("macro_variation1")
+		var m2: Variant = terrain.get_shader_param("macro_variation2")
+		if not (m1 is Color and m2 is Color):
+			return
+		_dry_macro = [m1, m2]
+	var wet := Color.WHITE.lerp(Color(0.78, 0.8, 0.78), k)
+	terrain.set_shader_param("macro_variation1", _dry_macro[0] * wet)
+	terrain.set_shader_param("macro_variation2", _dry_macro[1] * wet)
 
 
 ## Физическая форма-цилиндр для коллизии растительности (кэш по размеру).

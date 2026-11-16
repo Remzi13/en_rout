@@ -1,6 +1,6 @@
 extends SceneTree
-## Мир из сцен-чанков (запечён из art/map/map.blend): сцены всех чанков
-## индекса на месте, рельеф стыкуется на границах,
+## Запечённый мир (tools/export_map.sh): сцены всех чанков индекса на месте,
+## рельеф Terrain3D покрывает мир и лежит под дорогами (высота и покрытие),
 ## дороги связаны в одну сеть и гладко переходят через границы чанков,
 ## запечённый индекс мира (world_index.tres) совпадает со сценой.
 
@@ -24,6 +24,11 @@ func _run() -> void:
 		"%s, чанков %d" % [wr, total])
 
 	var map := (load("res://game/world/world.tscn") as PackedScene).instantiate() as WorldMap
+	# Камеры в тесте нет: детализацию рельефа считаем от узла в начале мира
+	# (он должен быть в дереве раньше рельефа).
+	var anchor := Node3D.new()
+	root.add_child(anchor)
+	(map.get_node("Terrain3D") as Terrain3D).clipmap_target = anchor
 	root.add_child(map)
 	await physics_frame
 	var chunks := map.chunks()
@@ -35,25 +40,10 @@ func _run() -> void:
 			and c.scene_file_path == WorldDefs.chunk_scene_path(c.coord)
 		var roads := c.find_children("*", "RoadPath", true, false)
 		for r: RoadPath in roads:
-			# Сгенерированное полотно не сохраняется в сцену (нет owner).
-			coords_ok = coords_ok and r.get_child_count() == 2
-	H.check("чанки стоят по своим координатам, полотно строится", coords_ok)
-
-	# Стык рельефа: правый край чанка = левый край соседа.
-	var by_coord := {}
-	for c in chunks:
-		by_coord[c.coord] = c
-	var max_gap := 0.0
-	for c in chunks:
-		var right: WorldChunk = by_coord.get(c.coord + Vector2i(1, 0))
-		if right == null:
-			continue
-		var va := _terrain_vertices(c)
-		var vb := _terrain_vertices(right)
-		var n := int(sqrt(va.size()))
-		for gz in n:
-			max_gap = maxf(max_gap, absf(va[gz * n + n - 1].y - vb[gz * n].y))
-	H.check("рельеф стыкуется на границах чанков", max_gap < 0.001, "разрыв %.4f м" % max_gap)
+			# Лента шоссе не сохраняется в сцену (нет owner) и строится при
+			# загрузке: меш и тело. Грунтовка — только рельеф.
+			coords_ok = coords_ok and r.get_child_count() == (2 if r.is_highway() else 0)
+	H.check("чанки стоят по своим координатам, лента шоссе строится", coords_ok)
 
 	# Сеть: все участки достижимы из узла старта.
 	var net := RoadNetwork.build(map)
@@ -73,6 +63,41 @@ func _run() -> void:
 			queue.append(e.b_node if link[1] else e.a_node)
 	H.check("дорожная сеть связная", seen.size() == net.node_positions.size(),
 		"%d из %d узлов" % [seen.size(), net.node_positions.size()])
+
+	# Рельеф: регион на каждый чанк, под осью каждой дороги — её высота и покрытие.
+	var terrain := map.get_node_or_null("Terrain3D") as Terrain3D
+	H.check("в world.tscn есть рельеф на весь мир", terrain != null and terrain.data.get_region_count() == total,
+		"регионов %d" % (terrain.data.get_region_count() if terrain != null else -1))
+	var max_off := 0.0
+	var worst_at := Vector3.ZERO
+	var points := 0
+	var right_surface := 0
+	# У перекрёстков высоты сходящихся дорог смешиваются — их не сверяем.
+	var junctions: Array[Vector3] = []
+	for node in net.node_positions.size():
+		if net.links(node).size() >= 3:
+			junctions.append(net.node_positions[node])
+	for r in idx.road_points.size():
+		var highway := idx.road_types[r] == WorldDefs.RoadType.HIGHWAY
+		for p in idx.road_points[r]:
+			points += 1
+			if WorldTerrain.surface_at(terrain, p) != (WorldDefs.Surface.ASPHALT if highway else WorldDefs.Surface.DIRT):
+				continue # конец грунтовки под лентой шоссе
+			right_surface += 1
+			var near_junction := false
+			for j in junctions:
+				near_junction = near_junction or j.distance_to(p) < 30.0
+			if near_junction:
+				continue
+			# Под лентой шоссе рельеф утоплен, чтобы не просвечивал.
+			var want := p.y - (0.1 if highway else 0.0)
+			var off := absf(_height(terrain, p) - want)
+			if off > max_off:
+				max_off = off
+				worst_at = p
+	H.check("рельеф под осью дорог — на высоте дороги", points > 0 and max_off < 0.05, "макс. %.3f м в %s" % [max_off, worst_at])
+	H.check("покрытие рельефа под дорогами: асфальт и грунт", right_surface > points * 0.97,
+		"%d из %d точек" % [right_surface, points])
 
 	# Переход через границу чанка: в узлах степени 2 направление не ломается.
 	var worst := 1.0
@@ -128,6 +153,12 @@ func _run() -> void:
 	H.finish(self)
 
 
-func _terrain_vertices(c: WorldChunk) -> PackedVector3Array:
-	var mi := c.get_node("Terrain") as MeshInstance3D
-	return mi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+## Высота рельефа в точке, билинейно по четырём соседним точкам сетки
+## (Terrain3DData.get_height отдаёт высоту ближайшей точки без интерполяции).
+func _height(terrain: Terrain3D, p: Vector3) -> float:
+	var x0 := floorf(p.x)
+	var z0 := floorf(p.z)
+	var d := terrain.data
+	var a := lerpf(d.get_height(Vector3(x0, 0, z0)), d.get_height(Vector3(x0 + 1, 0, z0)), p.x - x0)
+	var b := lerpf(d.get_height(Vector3(x0, 0, z0 + 1)), d.get_height(Vector3(x0 + 1, 0, z0 + 1)), p.x - x0)
+	return lerpf(a, b, p.z - z0)

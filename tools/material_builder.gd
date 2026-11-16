@@ -1,9 +1,9 @@
 extends RefCounted
-## Строит исходные материалы и меши-заглушки мира для tools/bake_world.gd.
+## Строит исходные материалы дорог и воды и меши-заглушки мира для tools/bake_world.gd
+## (текстуры и материал рельефа — tools/terrain_assets.gd).
 ## Результат сохраняется в game/world/assets/ и дальше правится в редакторе
 ## (например, можно подставить CC0-модели вместо примитивов).
 
-var terrain: StandardMaterial3D
 var highway: StandardMaterial3D
 var asphalt_plain: StandardMaterial3D
 var dirt_road: StandardMaterial3D
@@ -11,20 +11,10 @@ var water: StandardMaterial3D
 
 var rock_mesh: Mesh
 var bush_mesh: Mesh
-var water_mesh: PlaneMesh
 
 
 
 func _init() -> void:
-	terrain = StandardMaterial3D.new()
-	terrain.vertex_color_use_as_albedo = true
-	terrain.vertex_color_is_srgb = true
-	terrain.albedo_texture = _noise_texture(256, 0.08, 0.72, 1.0, 11)
-	terrain.uv1_triplanar = true
-	terrain.uv1_scale = Vector3(0.15, 0.15, 0.15)
-	terrain.roughness = 0.95
-	terrain.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-
 	highway = _road_material(_asphalt_image(true))
 	asphalt_plain = _road_material(_asphalt_image(false))
 	asphalt_plain.uv1_triplanar = true
@@ -38,10 +28,6 @@ func _init() -> void:
 	water.metallic = 0.3
 	water.roughness = 0.08
 	water.metallic_specular = 0.9
-	water_mesh = PlaneMesh.new()
-	water_mesh.size = Vector2(WorldDefs.CHUNK_SIZE, WorldDefs.CHUNK_SIZE)
-	water_mesh.center_offset = Vector3(WorldDefs.CHUNK_SIZE * 0.5, 0.0, WorldDefs.CHUNK_SIZE * 0.5)
-	water_mesh.material = water
 
 	_build_vegetation_meshes()
 
@@ -97,23 +83,6 @@ func _dirt_image() -> Image:
 			var grass := Color(0.32, 0.38, 0.2) * g * 1.5
 			img.set_pixel(x, y, grass.lerp(dirt, edge))
 	return img
-
-
-func _noise_texture(size: int, freq: float, lo: float, hi: float, s: int) -> ImageTexture:
-	var img := Image.create(size, size, false, Image.FORMAT_RGB8)
-	var noise := FastNoiseLite.new()
-	noise.seed = s
-	noise.frequency = freq
-	noise.fractal_octaves = 4
-	var rng := RandomNumberGenerator.new()
-	rng.seed = s
-	for y in size:
-		for x in size:
-			# Тайлится за счёт 4D-тора? Достаточно плавного шума + зерна.
-			var v := lerpf(lo, hi, clampf(noise.get_noise_2d(x, y) * 0.5 + 0.5 + rng.randf() * 0.1, 0.0, 1.0))
-			img.set_pixel(x, y, Color(v, v, v))
-	img.generate_mipmaps()
-	return ImageTexture.create_from_image(img)
 
 
 func _mat(color: Color, roughness: float = 0.9, instance_tint: bool = false) -> StandardMaterial3D:

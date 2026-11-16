@@ -1,12 +1,13 @@
 @tool
 class_name WorldMap
 extends Node3D
-## Корень game/world/world.tscn: все сцены-чанки, точка старта игрока
-## (PlayerStart) и невидимые стены по краю мира (Bounds). Сцена для обзора
+## Корень game/world/world.tscn: рельеф (Terrain3D) и вода, все сцены-чанки,
+## точка старта игрока (PlayerStart) и невидимые стены по краю мира (Bounds). Сцена для обзора
 ## в редакторе и для запекания индекса: игра её не грузит (чанки подгружает
 ## ChunkStreamer, старт и дороги — из WorldIndex).
-## Сцена и чанки пересоздаются tools/export_map.sh из art/map/map.blend:
-## править карту нужно в Blender, правки здесь пропадут.
+## Сцена и чанки пересоздаются tools/export_map.sh: дороги, лес и объекты
+## правятся в Blender (art/map/map.blend), рельеф — кистями в
+## game/world/terrain/terrain_edit.tscn. Правки здесь пропадут.
 
 
 func chunks() -> Array[WorldChunk]:
